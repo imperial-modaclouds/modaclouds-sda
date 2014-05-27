@@ -33,14 +33,17 @@ switch(method)
     case 'AR'
         %% Forecast linear system response into future
         data_id = iddata(data',[]);
-        try
+        try          
             sys = ar(data_id,m);
             p = forecast(sys,data_id,K);
             values = p.y;
             values = values(K);
         catch exception
             values = -1;
-            disp(exception);
+            exception.message
+            for k=1:length(exception.stack)
+                exception.stack(k);
+            end
             return;
         end
         
@@ -77,7 +80,10 @@ switch(method)
             end
         catch exception
             values = -1;
-            disp(exception);
+            exception.message
+            for k=1:length(exception.stack)
+                exception.stack(k);
+            end
             return;
         end
         
@@ -122,7 +128,10 @@ switch(method)
             end
         catch exception
             values = -1;
-            disp(exception);
+            exception.message
+            for k=1:length(exception.stack)
+                exception.stack(k);
+            end
             return;
         end
         

@@ -1,12 +1,11 @@
 %% main function, requires the configuration file as input
-clc
-clear
+
 % the required jar files
 javaaddpath(fullfile(pwd,'lib/commons-lang3-3.1.jar'));
 javaaddpath(fullfile(pwd,'lib/data-retriever-1.0.jar'))
 javaaddpath(fullfile(pwd,'lib/knowledge-base-api-1.0.jar'))
 javaaddpath(fullfile(pwd,'lib/object-store-api-0.1.jar'))
-javaaddpath(fullfile(pwd,'lib/dda-api-1.0.jar'))
+javaaddpath(fullfile(pwd,'lib/dda-api-1.0.1.jar'))
 
 % pwd
 % ctfroot
@@ -24,18 +23,21 @@ javaaddpath(fullfile(pwd,'lib/dda-api-1.0.jar'))
 %mo = javaObject('it.polimi.modaclouds.qos_models.monitoring_ontology.MO');
 %mo.setKnowledgeBaseURL(objectStoreConnector.getKBUrl);
 
+fileID = fopen('port.txt','r');
+port = fscanf(fileID,'%d');
+
 kbConnector = it.polimi.modaclouds.monitoring.kb.api.KBConnector.getInstance;
 
 startTime = 0;
 
 myRetriever = javaObject('imperial.modaclouds.monitoring.data_retriever.Client_Server');
-myRetriever.retrieve(8176);
+myRetriever.retrieve(port);
 
 ddaConnector = it.polimi.modaclouds.monitoring.ddaapi.DDAConnector.getInstance;
 
 while 1
     
-    if (java.lang.System.currentTimeMillis - startTime > 60000)
+    if (java.lang.System.currentTimeMillis - startTime > 10000)
         
         try
             sdas = kbConnector.getAll(java.lang.Class.forName('it.polimi.modaclouds.qos_models.monitoring_ontology.StatisticalDataAnalyzer'));
@@ -62,17 +64,22 @@ while 1
                 while (it_parameter.hasNext)
                     parameter = it_parameter.next;
                     if strcmp(parameter.getName(), 'timeStep')
-                        period(i+1) = str2double(parameter.getValue());
+                        period(i+1) = str2double(parameter.getValue())*1000;
                     end
                 end
                 
                 it_resource = setTargetResources{i+1}.iterator();
                 while (it_resource.hasNext)
-                    targetResources{i+1} = it_resource.next().getId();
+                    targetResources{i+1} = it_resource.next().getUri();
                 end
                 
                 i = i+1;
             end
+        end
+        
+        if i == 0
+            pause(10);
+            continue;
         end
         
         startTime = java.lang.System.currentTimeMillis;
@@ -103,13 +110,16 @@ while 1
             
     end
     
-    if value == -1
+    if value + 1 < 0.00001
     else
-        %value
         try
-            ddaConnector.sendSyncMonitoringDatum(num2str(value),returnedMetric{index},'SDA');
+            value
+            ddaConnector.sendSyncMonitoringDatum(num2str(value),returnedMetric{index},targetResources{index});
         catch exception
-            disp(exception);
+        %    exception.message
+        %    for k=1:length(exception.stack)
+        %        exception.stack(k);
+        %    end
         end
     end
     
