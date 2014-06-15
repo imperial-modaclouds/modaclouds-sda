@@ -3,7 +3,7 @@ Modaclouds-SDA
 ## How to run
 
 ```
-sudo ./run_main.sh
+sudo ./run_main.sh /usr/local/MATLAB/MATLAB_Compiler_Runtime/v81/
 ```
 
 ## Wiki
