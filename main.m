@@ -25,9 +25,11 @@ javaaddpath(fullfile(pwd,'lib/dda-api-1.0.1.jar'))
 
 fileID = fopen('port.txt','r');
 port = fscanf(fileID,'%d');
+mode = fscanf(fopen('mode.txt','r'),'%s');
 
-kbConnector = it.polimi.modaclouds.monitoring.kb.api.KBConnector.getInstance;
-
+if strcmp(mode,'kb')
+    kbConnector = it.polimi.modaclouds.monitoring.kb.api.KBConnector.getInstance;
+end
 startTime = 0;
 
 myRetriever = javaObject('imperial.modaclouds.monitoring.data_retriever.Client_Server');
@@ -37,7 +39,7 @@ ddaConnector = it.polimi.modaclouds.monitoring.ddaapi.DDAConnector.getInstance;
 
 while 1
     
-    if (java.lang.System.currentTimeMillis - startTime > 10000)
+    if (strcmp(mode,'kb') && java.lang.System.currentTimeMillis - startTime > 10000)
         
         try
             sdas = kbConnector.getAll(java.lang.Class.forName('it.polimi.modaclouds.qos_models.monitoring_ontology.StatisticalDataAnalyzer'));
@@ -83,7 +85,43 @@ while 1
         end
         
         startTime = java.lang.System.currentTimeMillis;
+    else
+        file = 'configuration_SDA.xml';
+        xDoc = xmlread(file);
+        rootNode = xDoc.getDocumentElement.getChildNodes;
+        node = rootNode.getFirstChild;
         
+        nbMetric = 0;
+        nbParameter = 0;
+        
+        while ~isempty(node)
+            if strcmp(node.getNodeName, 'metric')
+                nbMetric = nbMetric + 1;
+                returnedMetric{nbMetric} = char(node.getAttribute('returnedMetric'));
+                subNode = node.getFirstChild;
+                while ~isempty(subNode)
+                    if strcmpi(subNode.getNodeName, 'type')
+                        type{nbMetric} = char(subNode.getTextContent);
+                    end
+                    if strcmpi(subNode.getNodeName, 'timeStep')
+                        period(nbMetric) = str2double(subNode.getTextContent)*1000;
+                    end
+                    if strcmpi(subNode.getNodeName, 'targetResources')
+                        targetResources{nbMetric} = char(subNode.getTextContent);
+                    end
+                    if strcmpi(subNode.getNodeName, 'targetMetric')
+                        targetMetric{nbMetric} = char(subNode.getTextContent);
+                    end
+                    if strcmpi(subNode.getNodeName, 'parameter')
+                       nbParameter = nbParameter + 1;
+                       parameters{nbMetric}{nbParameter,1} = char(subNode.getAttribute('name'));
+                       parameters{nbMetric}{nbParameter,2} = char(subNode.getAttribute('value'));
+                    end
+                    subNode = subNode.getNextSibling;
+                end
+            end
+            node = node.getNextSibling; 
+        end
     end
     
     nextPauseTime = period;
@@ -95,18 +133,24 @@ while 1
     value = -1;
     
     switch type{index}
-        case 'Estimation'
-            value = estimation(targetResources{index},targetMetric{index},parameters{index},myRetriever);
-%         case 'ForecastingML'
-%             value = forecastingML(targetResources{index},targetMetric{index},parameters{index},myRetriever);
-%         case 'Correlation'
-%             value = correlation(targetResources{index},targetMetric{index},parameters{index},myRetriever);
+        case 'EstimationCI'
+            value = estimation(targetResources{index},targetMetric{index},'ci',parameters{index},myRetriever, mode);
+        case 'EstimationFCFS'
+            value = estimation(targetResources{index},targetMetric{index},'fcfs',parameters{index},myRetriever, mode);
+        case 'EstimationUBO'
+            value = estimation(targetResources{index},targetMetric{index},'ubo',parameters{index},myRetriever, mode);
+        case 'EstimationUBR'
+            value = estimation(targetResources{index},targetMetric{index},'ubr',parameters{index},myRetriever, mode);
+            %         case 'ForecastingML'
+            %             value = forecastingML(targetResources{index},targetMetric{index},parameters{index},myRetriever);
+            %         case 'Correlation'
+            %             value = correlation(targetResources{index},targetMetric{index},parameters{index},myRetriever);
         case 'ForecastingTimeSeriesAR'
-            value = forecastingTimeseries(targetResources{index},targetMetric{index},'AR',parameters{index},myRetriever);
+            value = forecastingTimeseries(targetResources{index},targetMetric{index},'AR',parameters{index},myRetriever, mode);
         case 'ForecastingTimeSeriesARIMA'
-            value = forecastingTimeseries(targetResources{index},targetMetric{index},'ARIMA',parameters{index},myRetriever);
+            value = forecastingTimeseries(targetResources{index},targetMetric{index},'ARIMA',parameters{index},myRetriever, mode);
         case 'ForecastingTimeSeriesARMA'
-            value = forecastingTimeseries(targetResources{index},targetMetric{index},'ARMA',parameters{index},myRetriever);
+            value = forecastingTimeseries(targetResources{index},targetMetric{index},'ARMA',parameters{index},myRetriever, mode);
             
     end
     
@@ -116,10 +160,10 @@ while 1
             value
             ddaConnector.sendSyncMonitoringDatum(num2str(value),returnedMetric{index},targetResources{index});
         catch exception
-        %    exception.message
-        %    for k=1:length(exception.stack)
-        %        exception.stack(k);
-        %    end
+            %    exception.message
+            %    for k=1:length(exception.stack)
+            %        exception.stack(k);
+            %    end
         end
     end
     

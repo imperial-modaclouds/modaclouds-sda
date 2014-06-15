@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<statisticalDataAnalyser>   
+    <metric returnedMetric="demand">
+        <type>EstimationCI</type>
+        <timeStep>1</timeStep>
+        <targetResources>FrontendVM</targetResources>
+        <targetMetric>CPUUtilization</targetMetric>
+        <parameter name='window' value='60000' />
+        <parameter name='cpuUtilTarget' value='FrontendVM' />
+        <parameter name='cpuUtilMetric' value='CPUUtilization' />
+        <parameter name='nCPU' value='1' />
+    </metric>
+</statisticalDataAnalyser>

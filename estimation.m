@@ -1,4 +1,4 @@
-function demand = estimation( targetResources,targetMetric,parameters, obj )
+function demand = estimation( targetResources,targetMetric,method,parameters, obj, mode )
 
 data_format = [];
 category_index = 1;
@@ -62,29 +62,47 @@ end
 rawData = data_format;
 rawData{3, category_index} = [];
 
-it_parameter = parameters.iterator();
-while (it_parameter.hasNext)
-    parameter = it_parameter.next;
-    switch char(parameter.getName)
-        case 'window'
-            window = str2double(parameter.getValue);
-        case 'warmUp'
-            warmUp = str2double(parameter.getValue);
-        case 'nCPU'
-            nCPU = str2double(parameter.getValue);
-        case 'avgWin'
-            avgWin = str2double(parameter.getValue);
-        case 'maxTime'
-            maxTime = str2double(parameter.getValue);
-        case 'cpuUtilTarget'
-            cpuUtilTarget = char(parameter.getValue);
-        case 'cpuUtilMetric'
-            cpuUtilMetric = char(parameter.getValue);
-        case 'method'
-            method = char(parameter.getValue);
+if strcmp(mode,'kb')
+    it_parameter = parameters.iterator();
+    while (it_parameter.hasNext)
+        parameter = it_parameter.next;
+        switch char(parameter.getName)
+            case 'window'
+                window = str2double(parameter.getValue);
+            case 'warmUp'
+                warmUp = str2double(parameter.getValue);
+            case 'nCPU'
+                nCPU = str2double(parameter.getValue);
+            case 'avgWin'
+                avgWin = str2double(parameter.getValue);
+            case 'maxTime'
+                maxTime = str2double(parameter.getValue);
+            case 'cpuUtilTarget'
+                cpuUtilTarget = char(parameter.getValue);
+            case 'cpuUtilMetric'
+                cpuUtilMetric = char(parameter.getValue);
+        end
+    end
+else
+    for i = 1:size(parameters,1)
+        switch parameters{i,1}
+            case 'window'
+                window = str2double(parameters{i,2});
+            case 'warmUp'
+                warmUp = str2double(parameters{i,2});
+            case 'nCPU'
+                nCPU = str2double(parameters{i,2});
+            case 'avgWin'
+                avgWin = str2double(parameters{i,2});
+            case 'maxTime'
+                maxTime = str2double(parameters{i,2});
+            case 'cpuUtilTarget'
+                cpuUtilTarget = char(parameters{i,2});
+            case 'cpuUtilMetric'
+                cpuUtilMetric = char(parameters{i,2});
+        end
     end
 end
-
 
 %FIX: obtain cpu value
 cpu = obj.obtainData(cpuUtilTarget,cpuUtilMetric);

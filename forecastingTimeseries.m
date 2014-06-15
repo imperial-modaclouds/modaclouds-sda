@@ -1,4 +1,4 @@
-function values = forecastingTimeseries( targetResources,targetMetric,method,parameters, obj )
+function values = forecastingTimeseries( targetResources,targetMetric,method,parameters, obj, mode )
 
 %FIX
 temp_str = obj.obtainData(targetResources,targetMetric);
@@ -12,20 +12,37 @@ end
 dataArrayList = temp_str.getValues;
 data =  convertArrayList( dataArrayList );
 
-it_parameter = parameters.iterator();
-while (it_parameter.hasNext)
-    parameter = it_parameter.next;
-    switch char(parameter.getName)
-        case 'order'
-            m = str2double(parameter.getValue);
-        case 'forecastPeriod'
-            K = str2double(parameter.getValue);
-        case 'autoregressive'
-            p = str2double(parameter.getValue);
-        case 'movingAverage'
-            q = str2double(parameter.getValue);
-        case 'integrated'
-            d = str2double(parameter.getValue);
+if strcmp(mode, 'kb')
+    it_parameter = parameters.iterator();
+    while (it_parameter.hasNext)
+        parameter = it_parameter.next;
+        switch char(parameter.getName)
+            case 'order'
+                m = str2double(parameter.getValue);
+            case 'forecastPeriod'
+                K = str2double(parameter.getValue);
+            case 'autoregressive'
+                p = str2double(parameter.getValue);
+            case 'movingAverage'
+                q = str2double(parameter.getValue);
+            case 'integrated'
+                d = str2double(parameter.getValue);
+        end
+    end
+else
+    for i = 1:size(parameters,1)
+        switch parameters{i,1}
+            case 'order'
+                m = str2double(parameters{i,2});
+            case 'forecastPeriod'
+                K = str2double(parameters{i,2});
+            case 'autoregressive'
+                p = str2double(parameters{i,2});
+            case 'movingAverage'
+                q = str2double(parameters{i,2});
+            case 'integrated'
+                d = str2double(parameters{i,2});
+        end
     end
 end
 
@@ -33,7 +50,7 @@ switch(method)
     case 'AR'
         %% Forecast linear system response into future
         data_id = iddata(data',[]);
-        try          
+        try
             sys = ar(data_id,m);
             p = forecast(sys,data_id,K);
             values = p.y;
