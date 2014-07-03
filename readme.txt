@@ -1,4 +1,4 @@
-MATLAB Compiler J
+MATLAB Compiler
 
 1. Prerequisites for Deployment 
 
