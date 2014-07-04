@@ -5,7 +5,7 @@ javaaddpath(fullfile(pwd,'lib/commons-lang3-3.1.jar'));
 javaaddpath(fullfile(pwd,'lib/data-retriever-1.0.jar'))
 javaaddpath(fullfile(pwd,'lib/knowledge-base-api-1.0.jar'))
 javaaddpath(fullfile(pwd,'lib/object-store-api-0.1.jar'))
-javaaddpath(fullfile(pwd,'lib/dda-api-1.0.1.jar'))
+javaaddpath(fullfile(pwd,'lib/dda-api-1.0.2.jar'))
 
 % pwd
 % ctfroot
