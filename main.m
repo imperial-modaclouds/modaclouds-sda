@@ -2,7 +2,7 @@
 
 % the required jar files
 javaaddpath(fullfile(pwd,'lib/commons-lang3-3.1.jar'));
-javaaddpath(fullfile(pwd,'lib/data-retriever-1.0.jar'))
+javaaddpath(fullfile(pwd,'lib/data-retriever-1.0.2.jar'))
 javaaddpath(fullfile(pwd,'lib/knowledge-base-api-1.0.jar'))
 javaaddpath(fullfile(pwd,'lib/object-store-api-0.1.jar'))
 javaaddpath(fullfile(pwd,'lib/dda-api-1.0.2.jar'))
@@ -39,7 +39,7 @@ ddaConnector = it.polimi.modaclouds.monitoring.ddaapi.DDAConnector.getInstance;
 
 while 1
     
-    if (strcmp(mode,'kb') && java.lang.System.currentTimeMillis - startTime > 10000)
+    if (strcmp(mode,'kb') && java.lang.System.currentTimeMillis - startTime > 60000)
         
         try
             sdas = kbConnector.getAll(java.lang.Class.forName('it.polimi.modaclouds.qos_models.monitoring_ontology.StatisticalDataAnalyzer'));
@@ -47,6 +47,8 @@ while 1
             classLoader = com.mathworks.jmi.ClassLoaderManager.getClassLoaderManager;
             sdas = kbConnector.getAll(classLoader.loadClass('it.polimi.modaclouds.qos_models.monitoring_ontology.StatisticalDataAnalyzer'));
         end
+        
+        sdas.size
         
         if ~isempty(sdas)
             it = sdas.iterator();
@@ -66,26 +68,40 @@ while 1
                 while (it_parameter.hasNext)
                     parameter = it_parameter.next;
                     if strcmp(parameter.getName(), 'timeStep')
-                        period(i+1) = str2double(parameter.getValue())*1000;
+                        new_period(i+1) = str2double(parameter.getValue())*1000;
                     end
                 end
                 
                 it_resource = setTargetResources{i+1}.iterator();
+                j = 0;
                 while (it_resource.hasNext)
-                    targetResources{i+1} = it_resource.next().getUri();
+                    targetResources{i+1,j+1} = it_resource.next().getUri();
+                    j = j+1;
                 end
+                targetResources
                 
                 i = i+1;
             end
         end
         
+        if exist('period','var') == 0
+            period = new_period;
+            nextPauseTime = period;
+        else
+            if ~isequal(period,new_period)
+                nextPauseTime = period;
+            end
+        end
+        
+                
         if i == 0
             pause(10);
             continue;
         end
         
         startTime = java.lang.System.currentTimeMillis;
-    else
+    end
+    if (strcmp(mode,'file') && java.lang.System.currentTimeMillis - startTime > 60000)
         file = 'configuration_SDA.xml';
         xDoc = xmlread(file);
         rootNode = xDoc.getDocumentElement.getChildNodes;
@@ -123,24 +139,26 @@ while 1
             node = node.getNextSibling; 
         end
     end
-    
-    nextPauseTime = period;
-    
+        
     [pauseTime, index] = min(nextPauseTime);
     nextPauseTime = nextPauseTime - pauseTime;
     pause(pauseTime/1000)
-    
+        
     value = -1;
     
     switch type{index}
-        case 'EstimationCI'
+        case 'aaaaEstimationCI'
             value = estimation(targetResources{index},targetMetric{index},'ci',parameters{index},myRetriever, mode);
         case 'EstimationFCFS'
             value = estimation(targetResources{index},targetMetric{index},'fcfs',parameters{index},myRetriever, mode);
         case 'EstimationUBO'
             value = estimation(targetResources{index},targetMetric{index},'ubo',parameters{index},myRetriever, mode);
-        case 'EstimationUBR'
+        case 'aaaaEstimationUBR'
             value = estimation(targetResources{index},targetMetric{index},'ubr',parameters{index},myRetriever, mode);
+        case 'EstimationCI'
+            value = haproxyCI(targetResources(index,:),targetMetric{index},parameters{index},myRetriever, mode);
+        case 'EstimationUBR'
+            value = haproxyUBR(targetResources(index,:),targetMetric{index},parameters{index},myRetriever, mode);
             %         case 'ForecastingML'
             %             value = forecastingML(targetResources{index},targetMetric{index},parameters{index},myRetriever);
             %         case 'Correlation'
@@ -151,7 +169,6 @@ while 1
             value = forecastingTimeseries(targetResources{index},targetMetric{index},'ARIMA',parameters{index},myRetriever, mode);
         case 'ForecastingTimeSeriesARMA'
             value = forecastingTimeseries(targetResources{index},targetMetric{index},'ARMA',parameters{index},myRetriever, mode);
-            
     end
     
     if value + 1 < 0.00001

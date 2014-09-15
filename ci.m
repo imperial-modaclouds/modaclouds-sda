@@ -1,4 +1,4 @@
-function [meanST,obs] = ci(data,nCPU,warmUp)
+function [meanST,Ddetail] = ci(data,nCPU,warmUp)
 % CI Complete Information statistical data analyzer (SDA).  
 % This SDA is based on the method proposed in 
 % Pérez, J.F., Pacheco-Sanchez, S. and Casale, G. 
@@ -44,6 +44,7 @@ numExp = 1;
 
 K = size(data,2) - 1;
 
+Ddetail = cell(1,K);
 sampleSize = size(data{4,1},1);
 for j = 2:K
     sampleSize = sampleSize + size(data{4,j},1);
@@ -142,6 +143,7 @@ while sum(acum(:,1)) < warmUp
     told = t;
 end
 
+state_detail = [];
 meanST = zeros(K,numExp);
 for e = 1:numExp
     %actually sampled data
@@ -157,16 +159,22 @@ for e = 1:numExp
         %r = min(n,W);
         r = n;
         for j = 1:r
+            if length(state(j,:)) <5
+                state(j,4) = 0;
+                %state(j,5) = 0;
+            end
             if r <= V %at most as many jobs in service as processors
                 state(j,3) = state(j,3) + telapsed;
+                state(j,4) = state(j,4) + telapsed*r;
             else %more jobs in service than processors
                 state(j,3) = state(j,3) + telapsed*V/r;
+                state(j,4) = state(j,4) + telapsed*V/r*r;
             end
         end
 
         %if the event is an arrival add the job to the state
         if timesOrder(i,2) == 0
-            state = [state; [timesOrder(i,3) t 0] ];
+            state = [state; [timesOrder(i,3) t 0 0 0] ];
         else
             %find job in progress that must leave
             k = 1; while state(k,2) ~= timesOrder(i,4); k = k+1; end 
@@ -175,12 +183,22 @@ for e = 1:numExp
             acum(state(k,1),2) = acum(state(k,1),2) + state(k,3);
             obs{state(k,1)} = [obs{state(k,1)}; state(k,3)];
             %update state
+            
+            temp = state(k,:);
+            temp(4) = temp(4)/temp(3);
+            if temp(3) ~= 0
+                state_detail = [state_detail; temp];
+            end
             state = [state(1:k-1,:); state(k+1:end,:)];
         end
         i = i+1;
         told = t;
     end
     meanST(:,e) = acum(:,2)./acum(:,1);
+end
+
+for i = 1:size(state_detail,1)
+    Ddetail{1,state_detail(i,1)} = [Ddetail{1,state_detail(i,1)};state_detail(i,2:4)];
 end
 
 %save(output_filename, 'meanST', '-ascii');

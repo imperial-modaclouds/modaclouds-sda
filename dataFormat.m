@@ -9,17 +9,23 @@ function [data,category_list] = dataFormat(data, period, category_list, cpu, cpu
     end
     
     data(:,delete) = [];
-    category_list(:,delete) = [];
     
-    delete = [];
-    for i = 1:size(data,2) - 1
-        if size(data{3,i},1) < 20
-            delete = [delete,i];
-        end
+    if exist('cpu','var') == 1 && ~isempty(category_list)
+        category_list(:,delete) = [];
     end
     
+%     delete = [];
+%     for i = 1:size(data,2) - 1
+%         if size(data{3,i},1) < 20
+%             delete = [delete,i];
+%         end
+%     end
+    
     data(:,delete) = [];
-    category_list(:,delete) = [];
+    
+    if exist('cpu','var') == 1 && ~isempty(category_list)
+        category_list(:,delete) = [];
+    end
 
     start = min(data{3,1});
     for i = 2:size(data,2)-1
