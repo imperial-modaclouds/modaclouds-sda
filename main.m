@@ -147,17 +147,17 @@ while 1
     value = -1;
     
     switch type{index}
-        case 'aaaaEstimationCI'
+        case 'EstimationCI'
             value = estimation(targetResources{index},targetMetric{index},'ci',parameters{index},myRetriever, mode);
         case 'EstimationFCFS'
             value = estimation(targetResources{index},targetMetric{index},'fcfs',parameters{index},myRetriever, mode);
         case 'EstimationUBO'
             value = estimation(targetResources{index},targetMetric{index},'ubo',parameters{index},myRetriever, mode);
-        case 'aaaaEstimationUBR'
-            value = estimation(targetResources{index},targetMetric{index},'ubr',parameters{index},myRetriever, mode);
-        case 'EstimationCI'
-            value = haproxyCI(targetResources(index,:),targetMetric{index},parameters{index},myRetriever, mode);
         case 'EstimationUBR'
+            value = estimation(targetResources{index},targetMetric{index},'ubr',parameters{index},myRetriever, mode);
+        case 'HaproxyCI'
+            value = haproxyCI(targetResources(index,:),targetMetric{index},parameters{index},myRetriever, mode);
+        case 'HaproxyUBR'
             value = haproxyUBR(targetResources(index,:),targetMetric{index},parameters{index},myRetriever, mode);
             %         case 'ForecastingML'
             %             value = forecastingML(targetResources{index},targetMetric{index},parameters{index},myRetriever);
