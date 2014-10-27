@@ -22,32 +22,36 @@ import java.util.Date;
 import java.util.Collections;
 
 if strcmp(mode,'kb')
-    it_parameter = parameters.iterator();
-    while (it_parameter.hasNext)
-        parameter = it_parameter.next;
-        switch char(parameter.getName)
-            case 'window'
-                window = str2double(parameter.getValue);
-            case 'warmUp'
-                warmUp = str2double(parameter.getValue);
-            case 'nCPU'
-                nCPU = char(parameter.getValue);
-                nCPU = str2num(nCPU);
-            case 'avgWin'
-                avgWin = str2double(parameter.getValue);
-            case 'maxTime'
-                maxTime = str2double(parameter.getValue);
-            case 'cpuUtilTarget1'
-                cpuUtilTarget{1,1} = char(parameter.getValue);
-            case 'cpuUtilTarget2'
-                cpuUtilTarget{1,2} = char(parameter.getValue);
-            case 'cpuUtilTarget3'
-                cpuUtilTarget{1,3} = char(parameter.getValue);
-            case 'cpuUtilTarget4'
-                cpuUtilTarget{1,4} = char(parameter.getValue);
-            case 'method'
-                method = char(parameter.getValue);
-        end
+    if ~isempty(parameters.get('window'))
+        window = str2double(parameters.get('window'));
+    end
+    if ~isempty(parameters.get('warmUp'))
+        warmUp = str2double(parameters.get('warmUp'));
+    end
+    if ~isempty(parameters.get('nCPU'))
+        nCPU = char(parameters.get('nCPU'));
+        nCPU = str2num(nCPU);
+    end
+    if ~isempty(parameters.get('avgWin'))
+        avgWin = str2double(parameters.get('avgWin'));
+    end
+    if ~isempty(parameters.get('maxTime'))
+        maxTime = str2double(parameters.get('maxTime'));
+    end
+    if ~isempty(parameters.get('cpuUtilTarget1'))
+        cpuUtilTarget{1,1} = char(parameters.get('cpuUtilTarget1'));
+    end
+    if ~isempty(parameters.get('cpuUtilTarget2'))
+        cpuUtilTarget{1,2} = char(parameters.get('cpuUtilTarget2'));
+    end
+    if ~isempty(parameters.get('cpuUtilTarget3'))
+        cpuUtilTarget{1,3} = char(parameters.get('cpuUtilTarget3'));
+    end
+    if ~isempty(parameters.get('cpuUtilTarget4'))
+        cpuUtilTarget{1,4} = char(parameters.get('cpuUtilTarget4'));
+    end
+    if ~isempty(parameters.get('method'))
+        method = char(parameters.get('method'));
     end
 else
     for i = 1:size(parameters,1)

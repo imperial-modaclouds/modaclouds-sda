@@ -13,21 +13,20 @@ dataArrayList = temp_str.getValues;
 data =  convertArrayList( dataArrayList );
 
 if strcmp(mode, 'kb')
-    it_parameter = parameters.iterator();
-    while (it_parameter.hasNext)
-        parameter = it_parameter.next;
-        switch char(parameter.getName)
-            case 'order'
-                m = str2double(parameter.getValue);
-            case 'forecastPeriod'
-                K = str2double(parameter.getValue);
-            case 'autoregressive'
-                p = str2double(parameter.getValue);
-            case 'movingAverage'
-                q = str2double(parameter.getValue);
-            case 'integrated'
-                d = str2double(parameter.getValue);
-        end
+    if ~isempty(parameters.get('order'))
+        m = str2double(parameters.get('order'));
+    end
+    if ~isempty(parameters.get('forecastPeriod'))
+        K = str2double(parameters.get('forecastPeriod'));
+    end
+    if ~isempty(parameters.get('autoregressive'))
+        p = str2double(parameters.get('autoregressive'));
+    end
+    if ~isempty(parameters.get('movingAverage'))
+        q = str2double(parameters.get('movingAverage'));
+    end
+    if ~isempty(parameters.get('integrated'))
+        d = str2double(parameters.get('integrated'));
     end
 else
     for i = 1:size(parameters,1)

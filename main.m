@@ -2,11 +2,10 @@
 
 % the required jar files
 javaaddpath(fullfile(pwd,'lib/commons-lang3-3.1.jar'));
-javaaddpath(fullfile(pwd,'lib/data-retriever-1.0.2.jar'))
-javaaddpath(fullfile(pwd,'lib/knowledge-base-api-1.0.jar'))
+javaaddpath(fullfile(pwd,'lib/data-retriever-1.0.3.jar'))
 javaaddpath(fullfile(pwd,'lib/object-store-api-0.1.jar'))
 javaaddpath(fullfile(pwd,'lib/dda-api-1.0.2.jar'))
-
+javaaddpath(fullfile(pwd,'lib/data-collector-1.3-SNAPSHOT.jar'))
 % pwd
 % ctfroot
 % javaaddpath(fullfile(ctfroot,'lib/commons-lang3-3.1.jar'));
@@ -28,25 +27,28 @@ port = fscanf(fileID,'%d');
 mode = fscanf(fopen('mode.txt','r'),'%s');
 
 if strcmp(mode,'kb')
-    kbConnector = it.polimi.modaclouds.monitoring.kb.api.KBConnector.getInstance;
+    imperial.modaclouds.monitoring.datacollectors.basic.DataCollectorAgent.initialize();
+    dcAgent = imperial.modaclouds.monitoring.datacollectors.basic.DataCollectorAgent.getInstance();
+    dcAgent.startSyncingWithKB();
 end
 startTime = 0;
 
+supportedFunctions = {'estimationci','estimationfcfs','estimationubo','estimationubr', ...
+    'haproxyci','haproxyubr','forecastingtimeseriesar','forecastingtimeseriesarima','forecastingtimeseriesarma'};
+
 myRetriever = javaObject('imperial.modaclouds.monitoring.data_retriever.Client_Server');
 myRetriever.retrieve(port);
-
-ddaConnector = it.polimi.modaclouds.monitoring.ddaapi.DDAConnector.getInstance;
 
 while 1
     
     if (strcmp(mode,'kb') && java.lang.System.currentTimeMillis - startTime > 60000)
         
-        try
-            sdas = kbConnector.getAll(java.lang.Class.forName('it.polimi.modaclouds.qos_models.monitoring_ontology.StatisticalDataAnalyzer'));
-        catch
-            classLoader = com.mathworks.jmi.ClassLoaderManager.getClassLoaderManager;
-            sdas = kbConnector.getAll(classLoader.loadClass('it.polimi.modaclouds.qos_models.monitoring_ontology.StatisticalDataAnalyzer'));
-        end
+        %try
+            sdas = dcAgent.getConfiguration(imperial.modaclouds.monitoring.datacollectors.basic.DataCollectorAgent.getVmId(),[]);
+        %catch
+            %classLoader = com.mathworks.jmi.ClassLoaderManager.getClassLoaderManager;
+            %sdas = DataCollectorAgent.getAll(classLoader.loadClass('it.polimi.modaclouds.qos_models.monitoring_ontology.StatisticalDataAnalyzer'));
+        %end
         
         sdas.size
         
@@ -56,32 +58,54 @@ while 1
             while (it.hasNext)
                 config = it.next;
                 %sdas.get(i).setStarted(true);
-                %kbConnector.add(sdas.get(i));
+                %DataCollectorAgent.add(sdas.get(i));
                 
-                parameters{i+1} = config.getParameters;
-                returnedMetric{i+1} = char(config.getReturnedMetric);
-                targetMetric{i+1} = char(config.getTargetMetric);
-                setTargetResources{i+1} = config.getTargetResources;
-                type{i+1} = char(config.getAggregateFunction);
-                
-                it_parameter = parameters{i+1}.iterator();
-                while (it_parameter.hasNext)
-                    parameter = it_parameter.next;
-                    if strcmp(parameter.getName(), 'timeStep')
-                        new_period(i+1) = str2double(parameter.getValue())*1000;
-                    end
+                temp_type = lower(char(config.getMonitoredMetric));
+                if isempty(find(ismember(supportedFunctions,temp_type)))
+                    continue;
                 end
                 
-                it_resource = setTargetResources{i+1}.iterator();
+                parameters{i+1} = config.getParameters;
+                returnedMetric{i+1} = char(config.getMonitoredMetric);
+                %targetMetric{i+1} = char(config.getTargetMetric);
+                setTargetResourceType = config.getMonitoredResourcesTypes;
+                type{i+1} = char(config.getMonitoredMetric);
+                
+                if ~isempty(parameters{i+1}.get('samplingTime'))
+                    new_period(i+1) = str2double(parameters{i+1}.get('samplingTime'))*1000;
+                end
+                if ~isempty(parameters{i+1}.get('targetMetric'))
+                    targetMetric{i+1} = char(parameters{i+1}.get('targetMetric'));
+                end
+                
+                it_resource = setTargetResourceType.iterator();
                 j = 0;
                 while (it_resource.hasNext)
-                    targetResources{i+1,j+1} = it_resource.next().getUri();
-                    j = j+1;
+                    set = dcAgent.getEntitiesByPropertyValue(it_resource.next,'type','model');
+                    it_vm = set.iterator();
+                    while (it_vm.hasNext)
+                        targetResources{i+1,j+1} = char(it_vm.next.getId);
+                        j = j+1;
+                    end
+%                     targetResources{i+1,j+1} = char(it_resource.next());
+%                     if strcmp(targetResources{i+1,j+1},'Frontend')
+%                         targetResources{i+1,1} = 'frontend1';
+%                         %targetResources{i+1,2} = 'frontend2';
+%                     end
+                    
+                    
                 end
                 targetResources
                 
                 i = i+1;
             end
+            
+        end
+        
+        
+        if i == 0
+            pause(10);
+            continue;
         end
         
         if exist('period','var') == 0
@@ -91,12 +115,6 @@ while 1
             if ~isequal(period,new_period)
                 nextPauseTime = period;
             end
-        end
-        
-                
-        if i == 0
-            pause(10);
-            continue;
         end
         
         startTime = java.lang.System.currentTimeMillis;
@@ -112,15 +130,14 @@ while 1
         
         while ~isempty(node)
             if strcmp(node.getNodeName, 'metric')
-                nbMetric = nbMetric + 1;
-                returnedMetric{nbMetric} = char(node.getAttribute('returnedMetric'));
                 subNode = node.getFirstChild;
                 while ~isempty(subNode)
                     if strcmpi(subNode.getNodeName, 'type')
                         type{nbMetric} = char(subNode.getTextContent);
+                        nbMetric = nbMetric + 1;
                     end
                     if strcmpi(subNode.getNodeName, 'timeStep')
-                        period(nbMetric) = str2double(subNode.getTextContent)*1000;
+                        new_period(nbMetric) = str2double(subNode.getTextContent)*1000
                     end
                     if strcmpi(subNode.getNodeName, 'targetResources')
                         targetResources{nbMetric} = char(subNode.getTextContent);
@@ -129,45 +146,55 @@ while 1
                         targetMetric{nbMetric} = char(subNode.getTextContent);
                     end
                     if strcmpi(subNode.getNodeName, 'parameter')
-                       nbParameter = nbParameter + 1;
-                       parameters{nbMetric}{nbParameter,1} = char(subNode.getAttribute('name'));
-                       parameters{nbMetric}{nbParameter,2} = char(subNode.getAttribute('value'));
+                        nbParameter = nbParameter + 1;
+                        parameters{nbMetric}{nbParameter,1} = char(subNode.getAttribute('name'));
+                        parameters{nbMetric}{nbParameter,2} = char(subNode.getAttribute('value'));
                     end
                     subNode = subNode.getNextSibling;
                 end
+                returnedMetric{nbMetric} = char(node.getAttribute('returnedMetric'));
             end
-            node = node.getNextSibling; 
+            node = node.getNextSibling;
+        end
+        
+        if exist('period','var') == 0
+            period = new_period;
+            nextPauseTime = period;
+        else
+            if ~isequal(period,new_period)
+                nextPauseTime = period;
+            end
         end
     end
-        
+    
     [pauseTime, index] = min(nextPauseTime);
     nextPauseTime = nextPauseTime - pauseTime;
     pause(pauseTime/1000)
-        
+    
     value = -1;
     
-    switch type{index}
-        case 'EstimationCI'
+    switch lower(type{index})
+        case 'estimationci'
             value = estimation(targetResources{index},targetMetric{index},'ci',parameters{index},myRetriever, mode);
-        case 'EstimationFCFS'
+        case 'estimationfcfs'
             value = estimation(targetResources{index},targetMetric{index},'fcfs',parameters{index},myRetriever, mode);
-        case 'EstimationUBO'
+        case 'estimationubo'
             value = estimation(targetResources{index},targetMetric{index},'ubo',parameters{index},myRetriever, mode);
-        case 'EstimationUBR'
+        case 'estimationubr'
             value = estimation(targetResources{index},targetMetric{index},'ubr',parameters{index},myRetriever, mode);
-        case 'HaproxyCI'
-            value = haproxyCI(targetResources(index,:),targetMetric{index},parameters{index},myRetriever, mode);
-        case 'HaproxyUBR'
+        case 'haproxyci'
+            value = haproxyCI(targetResources(index,:),targetMetric{index},parameters{index},myRetriever, mode, dcAgent, returnedMetric{index}, new_period(index));
+        case 'haproxyubr'
             value = haproxyUBR(targetResources(index,:),targetMetric{index},parameters{index},myRetriever, mode);
             %         case 'ForecastingML'
             %             value = forecastingML(targetResources{index},targetMetric{index},parameters{index},myRetriever);
             %         case 'Correlation'
             %             value = correlation(targetResources{index},targetMetric{index},parameters{index},myRetriever);
-        case 'ForecastingTimeSeriesAR'
+        case 'forecastingtimeseriesar'
             value = forecastingTimeseries(targetResources{index},targetMetric{index},'AR',parameters{index},myRetriever, mode);
-        case 'ForecastingTimeSeriesARIMA'
+        case 'forecastingtimeseriesarima'
             value = forecastingTimeseries(targetResources{index},targetMetric{index},'ARIMA',parameters{index},myRetriever, mode);
-        case 'ForecastingTimeSeriesARMA'
+        case 'forecastingtimeseriesarma'
             value = forecastingTimeseries(targetResources{index},targetMetric{index},'ARMA',parameters{index},myRetriever, mode);
     end
     
@@ -175,7 +202,7 @@ while 1
     else
         try
             value
-            ddaConnector.sendSyncMonitoringDatum(num2str(value),returnedMetric{index},targetResources{index});
+            dcAgent.sendSyncMonitoringDatum(num2str(value),returnedMetric{index},targetResources{index});
         catch exception
             %    exception.message
             %    for k=1:length(exception.stack)

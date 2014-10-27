@@ -1,15 +1,21 @@
-function demand = haproxyCI( targetResources,targetMetric,parameters, obj, mode )
+function demand = haproxyCI( targetResources,targetMetric,parameters, obj, mode, dcAgent, returnedMetric, period )
 
-N_haproxy = size(targetResources,2)
+N_haproxy = size(targetResources,2);
 
+flag = 0;
 for i = 1:N_haproxy
     temp_str{1,i} = obj.obtainData(targetResources{1,i},targetMetric);
     
     if isempty(temp_str{1,i})
         demand = -1;
         disp(strcat('No data received from target resources: ',targetResources{1,i}))
-        return;
+    else
+        flag = 1;
     end
+end
+
+if flag == 0
+    return;
 end
 
 % clear
@@ -20,32 +26,38 @@ import java.util.ArrayList;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.Collections;
+import java.util.HashMap;
+import java.util.Map;
 % 
 if strcmp(mode,'kb')
-    it_parameter = parameters.iterator();
-    while (it_parameter.hasNext)
-        parameter = it_parameter.next;
-        switch char(parameter.getName)
-            case 'window'
-                window = str2double(parameter.getValue);
-            case 'warmUp'
-                warmUp = str2double(parameter.getValue);
-            case 'nCPU'
-                nCPU = char(parameter.getValue);
-                nCPU = str2num(nCPU);
-            case 'avgWin'
-                avgWin = str2double(parameter.getValue);
-            case 'maxTime'
-                maxTime = str2double(parameter.getValue);
-            case 'cpuUtilTarget'
-                cpuUtilTarget = char(parameter.getValue);
-            case 'cpuUtilMetric'
-                cpuUtilMetric = char(parameter.getValue);
-            case 'method'
-                method = char(parameter.getValue);
-            case 'filePath'
-                filePath = char(parameter.getValue);
-        end
+    if ~isempty(parameters.get('window'))
+        window = str2double(parameters.get('window'));
+    else
+        window = 60000;
+    end
+    if ~isempty(parameters.get('warmUp'))
+        warmUp = str2double(parameters.get('warmUp'));
+    else
+        warmUp = 0;
+    end
+    if ~isempty(parameters.get('nCPU'))
+        nCPU = char(parameters.get('nCPU'));
+        nCPU = str2num(nCPU);
+    end
+    if ~isempty(parameters.get('avgWin'))
+        avgWin = str2double(parameters.get('avgWin'));
+    end
+    if ~isempty(parameters.get('maxTime'))
+        maxTime = str2double(parameters.get('maxTime'));
+    end
+    if ~isempty(parameters.get('cpuUtilTarget'))
+        cpuUtilTarget = char(parameters.get('cpuUtilTarget'));
+    end
+    if ~isempty(parameters.get('cpuUtilMetric'))
+        cpuUtilMetric = char(parameters.get('cpuUtilMetric'));
+    end
+    if ~isempty(parameters.get('filePath'))
+        filePath = char(parameters.get('filePath'));
     end
 else
     for i = 1:size(parameters,1)
@@ -70,6 +82,9 @@ else
         end
     end
 end
+
+%save('test.mat','str_cell','N_haproxy','warmUp','nCPU')
+
 % 
 % if ~strcmp(method,'ci')
 %     cpu = obj.obtainData(cpuUtilTarget,cpuUtilMetric);
@@ -87,16 +102,18 @@ end
 % line = file.readLine;
 
 
-try 
-    load(strcat(filePath,'LBData.mat'))
-    disp('Previous data loaded')
-catch
+%try 
+%    load(strcat(filePath,'LBData.mat'))
+%    disp('Previous data loaded')
+%catch
     categoryList = ArrayList;
     serverIDList = cell(1,2);
     frontendList = ArrayList; 
-end
+    frontendResourceMap = HashMap;
+%end
 data_session = cell(1,N_haproxy);
 data = cell(N_haproxy,4);
+serverIDListAll = ArrayList;
 sessionIDList = cell(1,N_haproxy);
 sessionTimes = cell(1,N_haproxy);
 thinkTimes = cell(1,N_haproxy);
@@ -111,7 +128,11 @@ expression=['(\w+ \d+ \S+) (\S+) (\S+)\[(\d+)\]: (\S+):(\d+) \[(\S+)\] ' ...
     '(\S+) ([^"]+) (\S+) *$'];
 
 for k = 1:N_haproxy
-
+    
+    if isempty(temp_str{1,k})
+        continue;
+    end
+    
     values = temp_str{1,k}.getValues;
 
     for j = 0:values.size-1
@@ -139,6 +160,7 @@ for k = 1:N_haproxy
             frontend = java.lang.String(strrep(output{1,1}{1,9},'~',''));
 
             if ~frontendList.contains(frontend)
+				frontendResourceMap.put(frontend,targetResources{1,k});
                 frontendList.add(frontend);
                 frontendID = frontendList.indexOf(frontend) + 1;
                 serverIDList{1,frontendID} = ArrayList;
@@ -159,6 +181,10 @@ for k = 1:N_haproxy
             if ~serverIDList{1,frontendID}.contains(server)
                 serverIDList{1,frontendID}.add(server);
             end
+            if ~serverIDListAll.contains(server)
+                serverIDListAll.add(server);
+            end
+            serverIDAll = serverIDListAll.indexOf(server) + 1;
             serverID = serverIDList{1,frontendID}.indexOf(server) + 1;
 
             str_cookie = java.lang.String(output{1,1}{1,14});
@@ -193,12 +219,12 @@ for k = 1:N_haproxy
             str = java.lang.String(output{1,1}{1,11});
             response = str2double(str.substring(str.lastIndexOf('/')+1))/1000;
 
-            if size(data{frontendID,serverID},2) < categoryIndex
-                data{frontendID,serverID}{6,categoryIndex} = [];
+            if size(data{1,serverIDAll},2) < categoryIndex
+                data{1,serverIDAll}{6,categoryIndex} = [];
             end
 
-            data{frontendID,serverID}{3,categoryIndex} = [data{frontendID,serverID}{3,categoryIndex};arrival];
-            data{frontendID,serverID}{4,categoryIndex} = [data{frontendID,serverID}{4,categoryIndex};response];
+            data{1,serverIDAll}{3,categoryIndex} = [data{1,serverIDAll}{3,categoryIndex};arrival];
+            data{1,serverIDAll}{4,categoryIndex} = [data{1,serverIDAll}{4,categoryIndex};response];
 
             if sessionIDList{1,frontendID}.contains(sessionID)
                 index = sessionIDList{1,frontendID}.indexOf(sessionID);
@@ -258,32 +284,67 @@ for s = 1:frontendList.size
     end
 end
 
+max_length = 0;
 
 for i = 1:size(data,2)
-    for s = 1:frontendList.size
-        if ~isempty(data{s,i})
-            data{s,i}{2,size(data{s,i},2)+1} = [];
-            switch method
-                case 'ci'
-                    [D_request{s,i},~] = ci(data{s,i},nCPU(i),warmUp);
-                case 'fcfs'
-                    %[data{s,i}] = dataFormat(data{s,i},window,[],cpu_value,cpu_timestamps);
-                    D_request{s,i} = fcfs(data{s,i},nCPU(i),avgWin);
-                case 'ubo'
-                    %[data{s,i}] = dataFormat(data{s,i},window,[],cpu_value,cpu_timestamps);
-                    D_request{s,i} = ubo(data{s,i},maxTime);
-                case 'ubr'
-                    %[data{s,i}] = dataFormat(data{s,i},window,[],cpu_value,cpu_timestamps);
-                    D_request{s,i} = ubr(data{s,i},nCPU(i));
-                case 'otherwise'
-                    warning('Unexpected method. No demand generated.');
+    if ~isempty(data{1,i})
+        data{1,i}{2,size(data{1,i},2)+1} = [];
+        server_id = serverIDListAll.get(i-1);
+        index = str2double(strrep(server_id,'ofbiz',''));
+        [D_request{1,i},~] = ci(data{1,i},nCPU(index),warmUp);
+        %             switch method
+        %                 case 'ci'
+        %                     [D_request{s,i},~] = ci(data{s,i},nCPU(i),warmUp);
+        %                 case 'fcfs'
+        %                     %[data{s,i}] = dataFormat(data{s,i},window,[],cpu_value,cpu_timestamps);
+        %                     D_request{s,i} = fcfs(data{s,i},nCPU(i),avgWin);
+        %                 case 'ubo'
+        %                     %[data{s,i}] = dataFormat(data{s,i},window,[],cpu_value,cpu_timestamps);
+        %                     D_request{s,i} = ubo(data{s,i},maxTime);
+        %                 case 'ubr'
+        %                     %[data{s,i}] = dataFormat(data{s,i},window,[],cpu_value,cpu_timestamps);
+        %                     D_request{s,i} = ubr(data{s,i},nCPU(i));
+        %                 case 'otherwise'
+        %                     warning('Unexpected method. No demand generated.');
+        %             end
+        if max_length < length(D_request{1,i})
+            max_length = length(D_request{1,i});
+        end
+    end
+end
+
+D_request
+
+hasValue = zeros(1,max_length);
+count_hasValue = zeros(1,max_length);
+for j = 1:max_length
+    for i = 1:size(D_request,2)
+        if isempty(D_request{1,i})
+            continue;
+        end
+        if length(D_request{1,i}) >= j
+            if ~isnan(D_request{1,i}(j))
+                hasValue(j) = hasValue(j) + D_request{1,i}(j);
+                count_hasValue(j) = count_hasValue(j) + 1;
             end
-            
-            for j = 1:length(D_request{s,i})
-                if isnan(D_request{s,i}(j))
-                    D_request{s,i}(j) = 0.1;
-                end
-            end
+        end
+    end
+end
+
+for i = 1:size(D_request,2)
+    if isempty(D_request{1,i})
+        D_request{1,i} = hasValue./count_hasValue;
+        D_request{1,i} = D_request{1,i}';
+        continue;
+    end
+    for j = 1:length(D_request{1,i})
+        if isnan(D_request{1,i}(j))
+            D_request{1,i}(j) = hasValue(j)/count_hasValue(j);
+        end
+    end
+    if length(D_request{1,i}) < max_length
+        for j = length(D_request{1,i})+1:max_length
+            D_request{1,i}(j) = hasValue(j)/count_hasValue(j);
         end
     end
 end
@@ -348,9 +409,10 @@ for s = 1:frontendList.size
     end
     
     data_session{1,s}{2,size(data_session{1,s},2)+1} = zeros(10,1);
-    data_session{1,s} = dataFormat(data_session{1,s},60000);
+    data_session{1,s} = dataFormat(data_session{1,s},window);
 end
 
+time = round(period/window)
 for s = 1:frontendList.size
     for i = 1:uniSessions{1,s}.size
         temp = [];
@@ -361,6 +423,12 @@ for s = 1:frontendList.size
         N(s,i) = max(D_session_detail{1,1}(:,3));
         R(s,i) = mean(data_session{1,s}{5,i});
         X(s,i) = mean(data_session{1,s}{6,i});
+        
+        if length(data_session{1,s}{6,i}) <= time
+            X_period(s,i) = mean(data_session{1,s}{6,i});
+        else
+            X_period(s,i) = mean(data_session{1,s}{6,i}(end-time:end,:));
+        end
         Z_request(s,i) = mean(data_session{1,s}{7,i})/1000;
         uniArray{1,s} = arrayfun(@(e)e, uniSessions{1,s}.get(i-1).toArray())+1;
     end
@@ -373,18 +441,29 @@ D_request
 serverIDList{1,s}.size
 
 for s = 1:frontendList.size
-    for i = 1:serverIDList{1,s}.size
+    for i = 1:serverIDListAll.size
         %for j = 1:frontendList.size
-            D{1,s}(i,1) = sum(D_request{s,i}(uniArray{1,s}));
-            %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-            % divide number of cores or not?
-            %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+            %index = serverIDListAll.indexOf(serverIDList{1,s}.get(i-1));
+            server_id = serverIDListAll.get(i-1);
+            index = str2double(strrep(server_id,'ofbiz',''));
+            D{1,s}(i,1) = sum(D_request{1,i}(uniArray{1,s}));
+            D{1,s}(i,1) = D{1,s}(i,1)/nCPU(index);
         %end
     end
 end
 
+for i = 1:N_haproxy
+    if isempty(temp_str{1,i})
+        continue;
+    end
+    try 
+        dcAgent.sendSyncMonitoringDatum(num2str(sum(X_period(i,:))),returnedMetric,frontendResourceMap.get(frontendList.get(i-1)));
+    catch 
+        disp('could not send data to dda')
+    end
+end
 D
 
-save(strcat(filePath,'LBData.mat'),'N','D','Z','frontendList','serverIDList','categoryList','N','R','X','uniArray','Z_request')
+save(strcat(filePath,'LBData.mat'),'N','D','Z','frontendList','serverIDList','categoryList','N','R','X','uniArray','Z_request','serverIDListAll','frontendResourceMap','data_session','data','D_request')
 
-demand = 1;
+demand = -1;

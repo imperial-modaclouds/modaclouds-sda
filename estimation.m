@@ -63,25 +63,26 @@ rawData = data_format;
 rawData{3, category_index} = [];
 
 if strcmp(mode,'kb')
-    it_parameter = parameters.iterator();
-    while (it_parameter.hasNext)
-        parameter = it_parameter.next;
-        switch char(parameter.getName)
-            case 'window'
-                window = str2double(parameter.getValue);
-            case 'warmUp'
-                warmUp = str2double(parameter.getValue);
-            case 'nCPU'
-                nCPU = str2double(parameter.getValue);
-            case 'avgWin'
-                avgWin = str2double(parameter.getValue);
-            case 'maxTime'
-                maxTime = str2double(parameter.getValue);
-            case 'cpuUtilTarget'
-                cpuUtilTarget = char(parameter.getValue);
-            case 'cpuUtilMetric'
-                cpuUtilMetric = char(parameter.getValue);
-        end
+    if ~isempty(parameters.get('window'))
+        window = str2double(parameters.get('window'));
+    end
+    if ~isempty(parameters.get('warmUp'))
+        warmUp = str2double(parameters.get('warmUp'));
+    end
+    if ~isempty(parameters.get('nCPU'))
+        nCPU = str2double(parameters.get('nCPU'));
+    end
+    if ~isempty(parameters.get('avgWin'))
+        avgWin = str2double(parameters.get('avgWin'));
+    end
+    if ~isempty(parameters.get('maxTime'))
+        maxTime = str2double(parameters.get('maxTime'));
+    end
+    if ~isempty(parameters.get('cpuUtilTarget'))
+        cpuUtilTarget = char(parameters.get('cpuUtilTarget'));
+    end
+    if ~isempty(parameters.get('cpuUtilMetric'))
+        cpuUtilMetric = char(parameters.get('cpuUtilMetric'));
     end
 else
     for i = 1:size(parameters,1)
