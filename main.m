@@ -22,7 +22,7 @@ javaaddpath(fullfile(pwd,'lib/kbsync-0.0.1-SNAPSHOT.jar'))
 %mo.setKnowledgeBaseURL(objectStoreConnector.getKBUrl);
 
 if strcmp(mode,'kb')
-    imperial.modaclouds.kbsync.DataCollectorAgent.initialize();
+    imperial.modaclouds.kbsync.DataCollectorAgent.initialize('file');
     dcAgent = imperial.modaclouds.kbsync.DataCollectorAgent.getInstance();
     dcAgent.startSyncingWithKB();
 end
@@ -32,7 +32,7 @@ supportedFunctions = {'estimationci','estimationfcfs','estimationubo','estimatio
     'haproxyci','haproxyubr','forecastingtimeseriesar','forecastingtimeseriesarima','forecastingtimeseriesarma'};
 
 myRetriever = javaObject('imperial.modaclouds.monitoring.data_retriever.Client_Server');
-myRetriever.retrieve(port);
+myRetriever.retrieve(str2num(port));
 
 while 1
     
