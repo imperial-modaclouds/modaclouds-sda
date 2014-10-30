@@ -1,11 +1,10 @@
 %% main function, requires the configuration file as input
-
+function main(mode, port)
 % the required jar files
 javaaddpath(fullfile(pwd,'lib/commons-lang3-3.1.jar'));
 javaaddpath(fullfile(pwd,'lib/data-retriever-1.0.3.jar'))
 javaaddpath(fullfile(pwd,'lib/object-store-api-0.1.jar'))
-javaaddpath(fullfile(pwd,'lib/dda-api-1.0.2.jar'))
-javaaddpath(fullfile(pwd,'lib/data-collector-1.3-SNAPSHOT.jar'))
+javaaddpath(fullfile(pwd,'lib/kbsync-0.0.1-SNAPSHOT.jar'))
 % pwd
 % ctfroot
 % javaaddpath(fullfile(ctfroot,'lib/commons-lang3-3.1.jar'));
@@ -22,13 +21,9 @@ javaaddpath(fullfile(pwd,'lib/data-collector-1.3-SNAPSHOT.jar'))
 %mo = javaObject('it.polimi.modaclouds.qos_models.monitoring_ontology.MO');
 %mo.setKnowledgeBaseURL(objectStoreConnector.getKBUrl);
 
-fileID = fopen('port.txt','r');
-port = fscanf(fileID,'%d');
-mode = fscanf(fopen('mode.txt','r'),'%s');
-
 if strcmp(mode,'kb')
-    imperial.modaclouds.monitoring.datacollectors.basic.DataCollectorAgent.initialize();
-    dcAgent = imperial.modaclouds.monitoring.datacollectors.basic.DataCollectorAgent.getInstance();
+    imperial.modaclouds.kbsync.DataCollectorAgent.initialize();
+    dcAgent = imperial.modaclouds.kbsync.DataCollectorAgent.getInstance();
     dcAgent.startSyncingWithKB();
 end
 startTime = 0;
@@ -44,7 +39,7 @@ while 1
     if (strcmp(mode,'kb') && java.lang.System.currentTimeMillis - startTime > 60000)
         
         %try
-            sdas = dcAgent.getConfiguration(imperial.modaclouds.monitoring.datacollectors.basic.DataCollectorAgent.getVmId(),[]);
+            sdas = dcAgent.getConfiguration(imperial.modaclouds.kbsync.DataCollectorAgent.getVmId(),[]);
         %catch
             %classLoader = com.mathworks.jmi.ClassLoaderManager.getClassLoaderManager;
             %sdas = DataCollectorAgent.getAll(classLoader.loadClass('it.polimi.modaclouds.qos_models.monitoring_ontology.StatisticalDataAnalyzer'));
