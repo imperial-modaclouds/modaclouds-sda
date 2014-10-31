@@ -38,65 +38,66 @@ while 1
     
     if (strcmp(mode,'kb') && java.lang.System.currentTimeMillis - startTime > 60000)
         
-        %try
-            sdas = dcAgent.getConfiguration(imperial.modaclouds.kbsync.DataCollectorAgent.getVmId(),[]);
-        %catch
-            %classLoader = com.mathworks.jmi.ClassLoaderManager.getClassLoaderManager;
-            %sdas = DataCollectorAgent.getAll(classLoader.loadClass('it.polimi.modaclouds.qos_models.monitoring_ontology.StatisticalDataAnalyzer'));
-        %end
-        
-        sdas.size
-        
-        if ~isempty(sdas)
-            it = sdas.iterator();
-            i = 0;
-            while (it.hasNext)
-                config = it.next;
-                %sdas.get(i).setStarted(true);
-                %DataCollectorAgent.add(sdas.get(i));
-                
-                temp_type = lower(char(config.getMonitoredMetric));
-                if isempty(find(ismember(supportedFunctions,temp_type)))
-                    continue;
-                end
-                
-                parameters{i+1} = config.getParameters;
-                returnedMetric{i+1} = char(config.getMonitoredMetric);
-                %targetMetric{i+1} = char(config.getTargetMetric);
-                setTargetResourceType = config.getMonitoredResourcesTypes;
-                type{i+1} = char(config.getMonitoredMetric);
-                
-                if ~isempty(parameters{i+1}.get('samplingTime'))
-                    new_period(i+1) = str2double(parameters{i+1}.get('samplingTime'))*1000;
-                end
-                if ~isempty(parameters{i+1}.get('targetMetric'))
-                    targetMetric{i+1} = char(parameters{i+1}.get('targetMetric'));
-                end
-                
-                it_resource = setTargetResourceType.iterator();
-                j = 0;
-                while (it_resource.hasNext)
-                    set = dcAgent.getEntitiesByPropertyValue(it_resource.next,'type','model');
-                    it_vm = set.iterator();
-                    while (it_vm.hasNext)
-                        targetResources{i+1,j+1} = char(it_vm.next.getId);
-                        j = j+1;
+        for s = 1:length(supportedFunctions)
+            %try
+                sdas = dcAgent.getConfiguration([],supportedFunctions{1,s});
+            %catch
+                %classLoader = com.mathworks.jmi.ClassLoaderManager.getClassLoaderManager;
+                %sdas = DataCollectorAgent.getAll(classLoader.loadClass('it.polimi.modaclouds.qos_models.monitoring_ontology.StatisticalDataAnalyzer'));
+            %end
+
+            sdas.size
+
+            if ~isempty(sdas)
+                it = sdas.iterator();
+                i = 0;
+                while (it.hasNext)
+                    config = it.next;
+                    %sdas.get(i).setStarted(true);
+                    %DataCollectorAgent.add(sdas.get(i));
+
+                    temp_type = lower(char(config.getMonitoredMetric));
+                    if isempty(find(ismember(supportedFunctions,temp_type)))
+                        continue;
                     end
-%                     targetResources{i+1,j+1} = char(it_resource.next());
-%                     if strcmp(targetResources{i+1,j+1},'Frontend')
-%                         targetResources{i+1,1} = 'frontend1';
-%                         %targetResources{i+1,2} = 'frontend2';
-%                     end
-                    
-                    
+
+                    parameters{i+1} = config.getParameters;
+                    returnedMetric{i+1} = char(config.getMonitoredMetric);
+                    %targetMetric{i+1} = char(config.getTargetMetric);
+                    setTargetResourceType = config.getMonitoredResourcesTypes;
+                    type{i+1} = char(config.getMonitoredMetric);
+
+                    if ~isempty(parameters{i+1}.get('samplingTime'))
+                        new_period(i+1) = str2double(parameters{i+1}.get('samplingTime'))*1000;
+                    end
+                    if ~isempty(parameters{i+1}.get('targetMetric'))
+                        targetMetric{i+1} = char(parameters{i+1}.get('targetMetric'));
+                    end
+
+                    it_resource = setTargetResourceType.iterator();
+                    j = 0;
+                    while (it_resource.hasNext)
+                        set = dcAgent.getEntitiesByPropertyValue(it_resource.next,'type','model');
+                        it_vm = set.iterator();
+                        while (it_vm.hasNext)
+                            targetResources{i+1,j+1} = char(it_vm.next.getId);
+                            j = j+1;
+                        end
+    %                     targetResources{i+1,j+1} = char(it_resource.next());
+    %                     if strcmp(targetResources{i+1,j+1},'Frontend')
+    %                         targetResources{i+1,1} = 'frontend1';
+    %                         %targetResources{i+1,2} = 'frontend2';
+    %                     end
+
+
+                    end
+                    targetResources
+
+                    i = i+1;
                 end
-                targetResources
-                
-                i = i+1;
+
             end
-            
         end
-        
         
         if i == 0
             pause(10);
