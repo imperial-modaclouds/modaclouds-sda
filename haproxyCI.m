@@ -83,8 +83,8 @@ else
     end
 end
 
-%save('test.mat','str_cell','N_haproxy','warmUp','nCPU')
-
+% save('test.mat','str_cell','N_haproxy','warmUp','nCPU')
+% 
 % 
 % if ~strcmp(method,'ci')
 %     cpu = obj.obtainData(cpuUtilTarget,cpuUtilMetric);
@@ -94,8 +94,8 @@ end
 % method = 'ci'
 % warmUp = 0
 % nCPU = [1,1,2,4];
-
-
+% 
+% 
 % path = 'haproxy22.log';
 % file = RandomAccessFile( path, 'r' );
 % file.seek( 0 );
@@ -123,7 +123,7 @@ requestTimes = cell(1,N_haproxy);
 % expression=['(\w+ \d+ \S+) (\S+) (\S+)\[(\d+)\]: (\S+):(\d+) \[(\S+)\] ' ...
 %     '(\S+) (\S+)/(\S+) (\S+) (\S+) (\S+) *(\S+) (\S+) (\S+) (\S+) (\S+) '...
 %     '"(\S+) ([^"]+) (\S+)" *$'];
-expression=['(\w+ \d+ \S+) (\S+) (\S+)\[(\d+)\]: (\S+):(\d+) \[(\S+)\] ' ...
+expression=['(\w+\s*\d+ \S+) (\S+) (\S+)\[(\d+)\]: (\S+):(\d+) \[(\S+)\] ' ...
     '(\S+) (\S+)/(\S+) (\S+) (\S+) (\S+) *(\S+) (\S+) (\S+) (\S+) (\S+) '...
     '(\S+) ([^"]+) (\S+) *$'];
 
@@ -134,21 +134,22 @@ for k = 1:N_haproxy
     end
     
     values = temp_str{1,k}.getValues;
-
+    
     for j = 0:values.size-1
         str = values.get(j);
 
-    % flag = 0;
-    % while ~isempty(line)
-    % line = file.readLine;
-    % if isempty(line) && flag == 0
-    %     flag = 1;
-    %     path = 'haproxy2.log';
-    %     file = RandomAccessFile( path, 'r' );
-    %     file.seek( 0 );
-    %     line = file.readLine;   
-    % end
-    % str = line;
+%     line = []
+%     flag = 0;
+%     %if isempty(line) && flag == 0
+%         flag = 1;
+%         path = 'C:\Users\think\Desktop\haproxy.log';
+%         %path = 'D:\Dropbox\Modaclouds-SDA\haproxy2.log';
+%         file = RandomAccessFile( path, 'r' );
+%         file.seek( 0 );
+%         for j = 0:9900
+%         line = file.readLine;   
+%         str = line
+        
         output = regexp(char(str),expression,'tokens');
 
         if isempty(output)
@@ -452,10 +453,7 @@ for s = 1:frontendList.size
     end
 end
 
-for i = 1:N_haproxy
-    if isempty(temp_str{1,i})
-        continue;
-    end
+for i = 1:frontendList.size
     try 
         dcAgent.sendSyncMonitoringDatum(num2str(sum(X_period(i,:))),returnedMetric,frontendResourceMap.get(frontendList.get(i-1)));
     catch 
@@ -464,6 +462,6 @@ for i = 1:N_haproxy
 end
 D
 
-save(strcat(filePath,'LBData.mat'),'N','D','Z','frontendList','serverIDList','categoryList','N','R','X','uniArray','Z_request','serverIDListAll','frontendResourceMap','data_session','data','D_request')
+save(strcat(filePath,'LBData.mat'),'N','D','Z','frontendList','serverIDList','categoryList','N','R','X','uniArray','Z_request','serverIDListAll','frontendResourceMap','data_session','data','D_request','targetResources')
 
 demand = -1;

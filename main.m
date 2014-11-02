@@ -5,6 +5,8 @@ javaaddpath(fullfile(pwd,'lib/commons-lang3-3.1.jar'));
 javaaddpath(fullfile(pwd,'lib/data-retriever-1.0.3.jar'))
 javaaddpath(fullfile(pwd,'lib/object-store-api-0.1.jar'))
 javaaddpath(fullfile(pwd,'lib/kbsync-0.0.1-SNAPSHOT.jar'))
+
+version -java
 % pwd
 % ctfroot
 % javaaddpath(fullfile(ctfroot,'lib/commons-lang3-3.1.jar'));
@@ -22,8 +24,9 @@ javaaddpath(fullfile(pwd,'lib/kbsync-0.0.1-SNAPSHOT.jar'))
 %mo.setKnowledgeBaseURL(objectStoreConnector.getKBUrl);
 
 if strcmp(mode,'kb')
-    imperial.modaclouds.kbsync.DataCollectorAgent.initialize('file');
-    dcAgent = imperial.modaclouds.kbsync.DataCollectorAgent.getInstance();
+    dc = javaObject('imperial.modaclouds.kbsync.DataCollectorAgent');
+    dc.initialize(java.lang.String('file'));
+    dcAgent = dc.getInstance();
     dcAgent.startSyncingWithKB();
 end
 startTime = 0;
@@ -37,7 +40,7 @@ myRetriever.retrieve(str2num(port));
 while 1
     
     if (strcmp(mode,'kb') && java.lang.System.currentTimeMillis - startTime > 60000)
-        
+        i = 0;
         for s = 1:length(supportedFunctions)
             %try
                 sdas = dcAgent.getConfiguration([],supportedFunctions{1,s});
@@ -50,7 +53,6 @@ while 1
 
             if ~isempty(sdas)
                 it = sdas.iterator();
-                i = 0;
                 while (it.hasNext)
                     config = it.next;
                     %sdas.get(i).setStarted(true);
@@ -187,11 +189,11 @@ while 1
             %         case 'Correlation'
             %             value = correlation(targetResources{index},targetMetric{index},parameters{index},myRetriever);
         case 'forecastingtimeseriesar'
-            value = forecastingTimeseries(targetResources{index},targetMetric{index},'AR',parameters{index},myRetriever, mode);
+            value = forecastingTimeseries(targetResources(index,:),returnedMetric{index},targetMetric{index},'AR',parameters{index},myRetriever, mode, dcAgent);
         case 'forecastingtimeseriesarima'
-            value = forecastingTimeseries(targetResources{index},targetMetric{index},'ARIMA',parameters{index},myRetriever, mode);
+            value = forecastingTimeseries(targetResources(index,:),returnedMetric{index},targetMetric{index},'ARIMA',parameters{index},myRetriever, mode, dcAgent);
         case 'forecastingtimeseriesarma'
-            value = forecastingTimeseries(targetResources{index},targetMetric{index},'ARMA',parameters{index},myRetriever, mode);
+            value = forecastingTimeseries(targetResources(index,:),returnedMetric{index},targetMetric{index},'ARMA',parameters{index},myRetriever, mode, dcAgent);
     end
     
     if value + 1 < 0.00001
