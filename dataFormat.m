@@ -39,6 +39,7 @@ function [data,category_list] = dataFormat(data, period, category_list, cpu, cpu
         last_index = 0;
 
         departure = data{3,i}+data{4,i}*1000;
+        [departure,d_index] = sort(departure);
         while true
             index = find(departure>end_time+period);
 

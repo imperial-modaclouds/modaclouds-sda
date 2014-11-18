@@ -6,7 +6,12 @@ javaaddpath(fullfile(pwd,'lib/data-retriever-1.0.3.jar'))
 javaaddpath(fullfile(pwd,'lib/object-store-api-0.1.jar'))
 javaaddpath(fullfile(pwd,'lib/kbsync-0.0.1-SNAPSHOT.jar'))
 
-version -java
+if matlabpool('size') == 0
+    matlabpool open
+    setmcruserdata('ParallelProfile','clusterProfile.settings');
+    parallel.importProfile('clusterProfile.settings')
+end
+
 % pwd
 % ctfroot
 % javaaddpath(fullfile(ctfroot,'lib/commons-lang3-3.1.jar'));
@@ -37,9 +42,13 @@ supportedFunctions = {'estimationci','estimationfcfs','estimationubo','estimatio
 myRetriever = javaObject('imperial.modaclouds.monitoring.data_retriever.Client_Server');
 myRetriever.retrieve(str2num(port));
 
+fileID = fopen(fullfile(pwd,'nextTime.txt'),'w');
+
+count = 1;
+
 while 1
     
-    if (strcmp(mode,'kb') && java.lang.System.currentTimeMillis - startTime > 60000)
+    if (strcmp(mode,'kb') && java.lang.System.currentTimeMillis - startTime > 600000)
         i = 0;
         for s = 1:length(supportedFunctions)
             %try
@@ -165,12 +174,14 @@ while 1
         end
     end
     
+    nextPauseTime
+    fprintf(fileID,'%d %d\n',nextPauseTime);
     [pauseTime, index] = min(nextPauseTime);
     nextPauseTime = nextPauseTime - pauseTime;
     pause(pauseTime/1000)
     
     value = -1;
-    
+    tic;
     switch lower(type{index})
         case 'estimationci'
             value = estimation(targetResources{index},targetMetric{index},'ci',parameters{index},myRetriever, mode);
@@ -181,7 +192,7 @@ while 1
         case 'estimationubr'
             value = estimation(targetResources{index},targetMetric{index},'ubr',parameters{index},myRetriever, mode);
         case 'haproxyci'
-            value = haproxyCI(targetResources(index,:),targetMetric{index},parameters{index},myRetriever, mode, dcAgent, returnedMetric{index}, new_period(index));
+            [value,count] = haproxyCI(targetResources(index,:),targetMetric{index},parameters{index},myRetriever, mode, dcAgent, returnedMetric{index}, new_period(index),fileID,count);
         case 'haproxyubr'
             value = haproxyUBR(targetResources(index,:),targetMetric{index},parameters{index},myRetriever, mode);
             %         case 'ForecastingML'
@@ -208,6 +219,11 @@ while 1
             %    end
         end
     end
-    
-    nextPauseTime(index) = period(index);
+    nextPauseTime = nextPauseTime - toc*1000;
+    for i = 1:length(nextPauseTime)
+        if nextPauseTime(i) < 0
+            nextPauseTime(i) = 0;
+        end
+    end
+    nextPauseTime(index) = max(period(index)-toc*1000,0);
 end

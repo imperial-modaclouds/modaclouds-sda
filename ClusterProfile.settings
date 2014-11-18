@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<settings name="parallel" xmlns="urn:mathworks.matlab.settings" xsi:schemaLocation="urn:mathworks.matlab.settings settings.xsd" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+    <settings name="profiles">
+        <settings name="local" visible="true">
+            <key name="Description" visible="true">
+                <string>
+                    <value><![CDATA[The local cluster]]></value>
+                </string>
+            </key>
+            <key name="SchedulerComponent" visible="true">
+                <string>
+                    <value><![CDATA[localSchedulerComponent]]></value>
+                </string>
+            </key>
+        </settings>
+    </settings>
+    <settings name="schedulercomponents">
+        <settings name="Local" visible="true">
+            <settings name="localSchedulerComponent" visible="true">
+                <key name="DummyKey" visible="true">
+                    <string>
+                        <value><![CDATA[dummy]]></value>
+                    </string>
+                </key>
+                <key name="NumWorkers" visible="true">
+                    <double>
+                        <value>2.0</value>
+                    </double>
+                </key>
+            </settings>
+        </settings>
+    </settings>
+</settings>

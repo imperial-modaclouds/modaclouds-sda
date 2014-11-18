@@ -1,5 +1,15 @@
-function demand = haproxyCI( targetResources,targetMetric,parameters, obj, mode, dcAgent, returnedMetric, period )
+function [demand,count_file] = haproxyCI( targetResources,targetMetric,parameters, obj, mode, dcAgent, returnedMetric, period, fileID, count_file )
 
+tic
+delete = [];
+for i = 1:size(targetResources,2)
+    if isempty(targetResources{1,i})
+        delete = [delete,i];
+    end
+end
+targetResources(delete) = [];
+
+targetResources = sort(targetResources);
 N_haproxy = size(targetResources,2);
 
 flag = 0;
@@ -9,6 +19,7 @@ for i = 1:N_haproxy
     if isempty(temp_str{1,i})
         demand = -1;
         disp(strcat('No data received from target resources: ',targetResources{1,i}))
+        return
     else
         flag = 1;
     end
@@ -17,6 +28,8 @@ end
 if flag == 0
     return;
 end
+
+fprintf(fileID,'First check: %s\n',toc);
 
 % clear
 
@@ -102,24 +115,26 @@ end
 % line = file.readLine;
 
 
-%try 
-%    load(strcat(filePath,'LBData.mat'))
-%    disp('Previous data loaded')
-%catch
+try 
+    load(strcat(filePath,'LBData.mat'))
+    disp('Previous data loaded')
+catch
+    old_value = zeros(1,N_haproxy);
     categoryList = ArrayList;
     serverIDList = cell(1,2);
     frontendList = ArrayList; 
-    frontendResourceMap = HashMap;
-%end
+    serverIDListAll = ArrayList;
+    sessionIDList = cell(1,N_haproxy);
+    data = cell(N_haproxy,4);
+    sessionsList = cell(1,N_haproxy);
+    requestTimes = cell(1,N_haproxy);
+end
+frontendResourceMap = HashMap;
 data_session = cell(1,N_haproxy);
-data = cell(N_haproxy,4);
-serverIDListAll = ArrayList;
-sessionIDList = cell(1,N_haproxy);
 sessionTimes = cell(1,N_haproxy);
 thinkTimes = cell(1,N_haproxy);
-sessionsList = cell(1,N_haproxy);
-requestTimes = cell(1,N_haproxy);
 
+    
 % expression=['(\w+ \d+ \S+) (\S+) (\S+)\[(\d+)\]: (\S+):(\d+) \[(\S+)\] ' ...
 %     '(\S+) (\S+)/(\S+) (\S+) (\S+) (\S+) *(\S+) (\S+) (\S+) (\S+) (\S+) '...
 %     '"(\S+) ([^"]+) (\S+)" *$'];
@@ -135,7 +150,7 @@ for k = 1:N_haproxy
     
     values = temp_str{1,k}.getValues;
     
-    for j = 0:values.size-1
+    for j = old_value(k):values.size-1
         str = values.get(j);
 
 %     line = []
@@ -148,7 +163,7 @@ for k = 1:N_haproxy
 %         file.seek( 0 );
 %         for j = 0:9900
 %         line = file.readLine;   
-%         str = line
+%         str = line;
         
         output = regexp(char(str),expression,'tokens');
 
@@ -161,15 +176,15 @@ for k = 1:N_haproxy
             frontend = java.lang.String(strrep(output{1,1}{1,9},'~',''));
 
             if ~frontendList.contains(frontend)
-				frontendResourceMap.put(frontend,targetResources{1,k});
                 frontendList.add(frontend);
                 frontendID = frontendList.indexOf(frontend) + 1;
                 serverIDList{1,frontendID} = ArrayList;
                 sessionIDList{1,frontendID} = ArrayList;
                 sessionsList{1,frontendID} = ArrayList;
-                thinkTimes{1,frontendID} = zeros(1,2);
             end
+            frontendResourceMap.put(frontend,targetResources{1,k});
             frontendID = frontendList.indexOf(frontend) + 1;
+            thinkTimes{1,frontendID} = zeros(1,2);
             if isempty(sessionIDList{1,frontendID})
                 sessionIDList{1,frontendID} = ArrayList;
             end
@@ -247,9 +262,11 @@ for k = 1:N_haproxy
             end
         end
     end
-
+    old_value(k) = values.size;
 end
-% save('/home/ubuntu/sda/workspace.mat','sessionStart','requestTimes','sessionsList','data','sessionIDList','frontendID','frontendList','nCPU','method','warmUp')
+
+fprintf(fileID,'Second check: %s\n',toc);
+
 
 % clear
 % load('workspace.mat')
@@ -292,7 +309,9 @@ for i = 1:size(data,2)
         data{1,i}{2,size(data{1,i},2)+1} = [];
         server_id = serverIDListAll.get(i-1);
         index = str2double(strrep(server_id,'ofbiz',''));
-        [D_request{1,i},~] = ci(data{1,i},nCPU(index),warmUp);
+        [D_request{1,i},~] = ci(data{1,i},1,warmUp);
+        %[D_request{1,i},~] = ci(data{1,i},nCPU(index),warmUp);
+        
         %             switch method
         %                 case 'ci'
         %                     [D_request{s,i},~] = ci(data{s,i},nCPU(i),warmUp);
@@ -313,6 +332,9 @@ for i = 1:size(data,2)
         end
     end
 end
+
+fprintf(fileID,'Third check: %s\n',toc);
+
 
 D_request
 
@@ -350,10 +372,11 @@ for i = 1:size(D_request,2)
     end
 end
 
+
 uniSessions = cell(1,frontendList.size);
 for s = 1:frontendList.size
     uniSessions{1,s} = ArrayList;
-            
+
     uniSessions{1,s}.add(sessionsList{1,s}.get(0));
     for i = 0:sessionsList{1,s}.size - 1
         flag = 0;
@@ -413,30 +436,54 @@ for s = 1:frontendList.size
     data_session{1,s} = dataFormat(data_session{1,s},window);
 end
 
-time = round(period/window)
-for s = 1:frontendList.size
-    for i = 1:uniSessions{1,s}.size
-        temp = [];
-        temp{3,1} = data_session{1,s}{3,i};
-        temp{4,1} = data_session{1,s}{4,i};
-        temp{2,2} = zeros(10,1);
-        [~,D_session_detail] = ci(temp,1);
-        N(s,i) = max(D_session_detail{1,1}(:,3));
-        R(s,i) = mean(data_session{1,s}{5,i});
-        X(s,i) = mean(data_session{1,s}{6,i});
-        
-        if length(data_session{1,s}{6,i}) <= time
-            X_period(s,i) = mean(data_session{1,s}{6,i});
-        else
-            X_period(s,i) = mean(data_session{1,s}{6,i}(end-time:end,:));
-        end
-        Z_request(s,i) = mean(data_session{1,s}{7,i})/1000;
-        uniArray{1,s} = arrayfun(@(e)e, uniSessions{1,s}.get(i-1).toArray())+1;
-    end
-end
+save('/home/ubuntu/workspace.mat','sessionStart','requestTimes','D_request','serverIDListAll','sessionsList','data','sessionIDList','frontendID','frontendList','nCPU','warmUp','N_haproxy','data_session','uniSessions')
 
+fprintf(fileID,'Fourth check: %s\n',toc);
+
+time = 7;
+try
+    for s = 1:frontendList.size
+        for i = 1:uniSessions{1,s}.size
+            temp = [];
+            temp{3,1} = data_session{1,s}{3,i};
+            temp{4,1} = data_session{1,s}{4,i};
+            temp{2,2} = zeros(10,1);
+            [~,D_session_detail] = ci(temp,1);
+            N(s,i) = max(D_session_detail{1,1}(:,3));
+            R(s,i) = mean(data_session{1,s}{5,i});
+            X(s,i) = mean(data_session{1,s}{6,i});
+
+            if length(data_session{1,s}{6,i}) <= time
+                X_period(s,i) = mean(data_session{1,s}{6,i});
+            else
+                X_period(s,i) = mean(data_session{1,s}{6,i}(end-time:end-1,:));
+            end
+            Z_request(s,i) = mean(data_session{1,s}{7,i})/1000;
+            uniArray{1,s} = arrayfun(@(e)e, uniSessions{1,s}.get(i-1).toArray())+1;
+        end
+    end
+catch
+    demand = -1;
+    return
+end
 Z_session = N./X-R;
 Z = Z_session + Z_request;
+
+% if strcmp(frontendList.get(0),'backend_gold')
+%     R_LLaw = [20,20]./X_period'- [21,13];
+% else
+%     R_LLaw = [20,20]./X_period'- [13,21];
+% end
+% R_LLaw = sum(R_LLaw.*X_period')/sum(X);
+
+X_period_all = 0;
+for i = 1:frontendList.size
+    if strcmp(frontendList.get(i-1),'backend_gold')
+        X_period_all = X_period_all + sum(X_period(i,:))*10;
+    else
+        X_period_all = X_period_all + sum(X_period(i,:));
+    end
+end
 
 D_request
 serverIDList{1,s}.size
@@ -445,23 +492,32 @@ for s = 1:frontendList.size
     for i = 1:serverIDListAll.size
         %for j = 1:frontendList.size
             %index = serverIDListAll.indexOf(serverIDList{1,s}.get(i-1));
-            server_id = serverIDListAll.get(i-1);
-            index = str2double(strrep(server_id,'ofbiz',''));
+            %server_id = serverIDListAll.get(i-1);
+            %index = str2double(strrep(server_id,'ofbiz',''));
             D{1,s}(i,1) = sum(D_request{1,i}(uniArray{1,s}));
-            D{1,s}(i,1) = D{1,s}(i,1)/nCPU(index);
+            %D{1,s}(i,1) = D{1,s}(i,1)/nCPU(index);
         %end
     end
 end
 
 for i = 1:frontendList.size
     try 
-        dcAgent.sendSyncMonitoringDatum(num2str(sum(X_period(i,:))),returnedMetric,frontendResourceMap.get(frontendList.get(i-1)));
+%         if strcmp(frontendList.get(i-1),'backend_gold')
+%             dcAgent.sendSyncMonitoringDatum(num2str(sum(X_period(i,:))*2),returnedMetric,frontendResourceMap.get(frontendList.get(i-1)));
+%         else
+%             dcAgent.sendSyncMonitoringDatum(num2str(sum(X_period(i,:))),returnedMetric,frontendResourceMap.get(frontendList.get(i-1)));
+%         end
+            %dcAgent.sendSyncMonitoringDatum(num2str(R_LLaw),returnedMetric,frontendResourceMap.get(frontendList.get(i-1)));
+        fprintf(fileID,'throughput: %s\n',num2str(X_period_all));
+        dcAgent.sendSyncMonitoringDatum(num2str(X_period_all),returnedMetric,frontendResourceMap.get(frontendList.get(i-1)));
     catch 
+        fprintf(fileID,'could not send data to dda');
         disp('could not send data to dda')
     end
 end
 D
 
-save(strcat(filePath,'LBData.mat'),'N','D','Z','frontendList','serverIDList','categoryList','N','R','X','uniArray','Z_request','serverIDListAll','frontendResourceMap','data_session','data','D_request','targetResources')
-
+save(strcat(filePath,'LBData.mat'),'uniSessions','sessionsList','sessionIDList','sessionTimes','thinkTimes','requestTimes','N','D','Z','frontendList','serverIDList','sessionStart','categoryList','N','R','X','uniArray','Z_request','serverIDListAll','data_session','data','D_request','old_value','frontendResourceMap')
+save(strcat(filePath,'LBData',num2str(count_file),'.mat'),'uniSessions','sessionsList','sessionIDList','sessionTimes','thinkTimes','requestTimes','N','D','Z','frontendList','serverIDList','sessionStart','categoryList','N','R','X','uniArray','Z_request','serverIDListAll','data_session','data','D_request','old_value','frontendResourceMap')
+count_file = count_file + 1;
 demand = -1;
