@@ -268,10 +268,6 @@ end
 fprintf(fileID,'Second check: %s\n',toc);
 
 
-% clear
-% load('workspace.mat')
-% N_haproxy=2;
-% data_session = cell(1,N_haproxy);
 
 for s = 1:frontendList.size
 
@@ -309,8 +305,8 @@ for i = 1:size(data,2)
         data{1,i}{2,size(data{1,i},2)+1} = [];
         server_id = serverIDListAll.get(i-1);
         index = str2double(strrep(server_id,'ofbiz',''));
-        [D_request{1,i},~] = ci(data{1,i},1,warmUp);
-        %[D_request{1,i},~] = ci(data{1,i},nCPU(index),warmUp);
+        %[D_request{1,i},~] = ci(data{1,i},1,warmUp);
+        [D_request{1,i},~] = ci(data{1,i},nCPU(index),warmUp);
         
         %             switch method
         %                 case 'ci'
@@ -400,7 +396,7 @@ for s = 1:frontendList.size
             if size(data_session{1,s},2) < uniSessions{1,s}.size
                 data_session{1,s}{7,uniSessions{1,s}.size} = [];
             end
-            data_session{1,s}
+            data_session{1,s};
             data_session{1,s}{3,j+2} = [data_session{1,s}{3,j+2};sessionTimes{1,s}(index_session{1,s}(i+1),1)];
             data_session{1,s}{4,j+2} = [data_session{1,s}{4,j+2};(sessionTimes{1,s}(index_session{1,s}(i+1),2)-sessionTimes{1,s}(index_session{1,s}(i+1),1))/1000];
             data_session{1,s}{7,j+2} = [data_session{1,s}{7,j+2};thinkTimes{1,s}(index_session{1,s}(i+1),1)];
@@ -436,7 +432,7 @@ for s = 1:frontendList.size
     data_session{1,s} = dataFormat(data_session{1,s},window);
 end
 
-save('/home/ubuntu/workspace.mat','sessionStart','requestTimes','D_request','serverIDListAll','sessionsList','data','sessionIDList','frontendID','frontendList','nCPU','warmUp','N_haproxy','data_session','uniSessions')
+save(strcat(filePath,'workspace.mat'),'sessionStart','requestTimes','D_request','serverIDListAll','sessionsList','data','sessionIDList','frontendID','frontendList','nCPU','warmUp','N_haproxy','data_session','uniSessions')
 
 fprintf(fileID,'Fourth check: %s\n',toc);
 
@@ -485,7 +481,7 @@ for i = 1:frontendList.size
     end
 end
 
-D_request
+D_request;
 serverIDList{1,s}.size
 
 for s = 1:frontendList.size
