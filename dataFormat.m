@@ -20,9 +20,7 @@ function [data,category_list] = dataFormat(data, period, category_list, cpu, cpu
 %             delete = [delete,i];
 %         end
 %     end
-    
-    data(:,delete) = [];
-    
+        
     if exist('cpu','var') == 1 && ~isempty(category_list)
         category_list(:,delete) = [];
     end
