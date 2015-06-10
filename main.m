@@ -1,17 +1,18 @@
 %% main function, requires the configuration file as input
-function main(mode, port)
+function main(mode)
 % the required jar files
 javaaddpath(fullfile(pwd,'lib/commons-lang3-3.1.jar'));
-javaaddpath(fullfile(pwd,'lib/data-retriever-1.0.3.jar'))
-javaaddpath(fullfile(pwd,'lib/object-store-api-0.1.jar'))
-javaaddpath(fullfile(pwd,'lib/kbsync-0.0.1-SNAPSHOT.jar'))
+javaaddpath(fullfile(pwd,'lib/data-retriever-1.0.4.jar'))
+javaaddpath(fullfile(pwd,'lib/sdaSync-0.0.1-SNAPSHOT.jar'))
 
-if matlabpool('size') == 0
-    matlabpool open
-    setmcruserdata('ParallelProfile','clusterProfile.settings');
-    parallel.importProfile('clusterProfile.settings')
-end
+% if matlabpool('size') == 0
+%     matlabpool open
+%     setmcruserdata('ParallelProfile','clusterProfile.settings');
+%     parallel.importProfile('clusterProfile.settings')
+% end
 
+port = getenv('MODACLOUDS_MATLAB_SDA_PORT')
+%[~,port] = system('echo $MODACLOUDS_MATLAB_SDA_PORT')
 % pwd
 % ctfroot
 % javaaddpath(fullfile(ctfroot,'lib/commons-lang3-3.1.jar'));
@@ -28,16 +29,16 @@ end
 %mo = javaObject('it.polimi.modaclouds.qos_models.monitoring_ontology.MO');
 %mo.setKnowledgeBaseURL(objectStoreConnector.getKBUrl);
 
-if strcmp(mode,'kb')
-    dc = javaObject('imperial.modaclouds.kbsync.DataCollectorAgent');
-    dc.initialize(java.lang.String('file'));
-    dcAgent = dc.getInstance();
-    dcAgent.startSyncingWithKB();
+if strcmp(mode,'tower4clouds')
+    dc = javaObject('imperial.modaclouds.sdaSync.DataCollectorAgent');
+    dc.initiate();
+    dcAgent = dc.dcAgent();
+    %dcAgent.startSyncingWithKB();
 end
 startTime = 0;
 
-supportedFunctions = {'estimationci','estimationfcfs','estimationubo','estimationubr', ...
-    'haproxyci','haproxyubr','forecastingtimeseriesar','forecastingtimeseriesarima','forecastingtimeseriesarma'};
+%supportedFunctions = {'estimationci','estimationfcfs','estimationubo','estimationubr', ...
+%    'haproxyci','haproxyubr','forecastingtimeseriesar','forecastingtimeseriesarima','forecastingtimeseriesarma'};
 
 myRetriever = javaObject('imperial.modaclouds.monitoring.data_retriever.Client_Server');
 myRetriever.retrieve(str2num(port));
@@ -48,83 +49,47 @@ count = 1;
 
 while 1
     
-    if (strcmp(mode,'kb') && java.lang.System.currentTimeMillis - startTime > 600000)
+    if (strcmp(mode,'tower4clouds') && java.lang.System.currentTimeMillis - startTime > 600000)
         i = 0;
-        for s = 1:length(supportedFunctions)
-            %try
-                sdas = dcAgent.getConfiguration([],supportedFunctions{1,s});
-            %catch
-                %classLoader = com.mathworks.jmi.ClassLoaderManager.getClassLoaderManager;
-                %sdas = DataCollectorAgent.getAll(classLoader.loadClass('it.polimi.modaclouds.qos_models.monitoring_ontology.StatisticalDataAnalyzer'));
-            %end
-
-            sdas.size
-
-            if ~isempty(sdas)
-                it = sdas.iterator();
-                while (it.hasNext)
-                    config = it.next;
-                    %sdas.get(i).setStarted(true);
-                    %DataCollectorAgent.add(sdas.get(i));
-
-                    temp_type = lower(char(config.getMonitoredMetric));
-                    if isempty(find(ismember(supportedFunctions,temp_type)))
-                        continue;
-                    end
-
-                    parameters{i+1} = config.getParameters;
-                    returnedMetric{i+1} = char(config.getMonitoredMetric);
-                    %targetMetric{i+1} = char(config.getTargetMetric);
-                    setTargetResourceType = config.getMonitoredResourcesTypes;
-                    type{i+1} = char(config.getMonitoredMetric);
-
-                    if ~isempty(parameters{i+1}.get('samplingTime'))
-                        new_period(i+1) = str2double(parameters{i+1}.get('samplingTime'))*1000;
-                    end
-                    if ~isempty(parameters{i+1}.get('targetMetric'))
-                        targetMetric{i+1} = char(parameters{i+1}.get('targetMetric'));
-                    end
-
-                    it_resource = setTargetResourceType.iterator();
-                    j = 0;
-                    while (it_resource.hasNext)
-                        set = dcAgent.getEntitiesByPropertyValue(it_resource.next,'type','model');
-                        it_vm = set.iterator();
-                        while (it_vm.hasNext)
-                            targetResources{i+1,j+1} = char(it_vm.next.getId);
-                            j = j+1;
-                        end
-    %                     targetResources{i+1,j+1} = char(it_resource.next());
-    %                     if strcmp(targetResources{i+1,j+1},'Frontend')
-    %                         targetResources{i+1,1} = 'frontend1';
-    %                         %targetResources{i+1,2} = 'frontend2';
-    %                     end
-
-
-                    end
-                    targetResources
-
-                    i = i+1;
+        sdas = dc.checkMetric();
+        
+        sdas.size
+        
+        if ~isempty(sdas)
+            it = sdas.iterator();
+            while (it.hasNext)
+                config = it.next;
+                
+                parameters{i+1} = config.getParameters;
+                returnedMetric{i+1} = char(config.getMetricName);
+                targetMetric{i+1} = char(config.getTargetMetric);
+                type{i+1} = char(config.getFunction);
+                
+                if ~isempty(parameters{i+1}.get('samplingTime'))
+                    new_period(i+1) = str2double(parameters{i+1}.get('samplingTime'))*1000;
                 end
-
+                %                 if ~isempty(parameters{i+1}.get('targetMetric'))
+                %                     targetMetric{i+1} = char(parameters{i+1}.get('targetMetric'));
+                %                 end
+                i = i+1;
             end
-        end
-        
-        if i == 0
-            pause(10);
-            continue;
-        end
-        
-        if exist('period','var') == 0
-            period = new_period;
-            nextPauseTime = period;
-        else
-            if ~isequal(period,new_period)
+            
+            if i == 0
+                pause(10);
+                continue;
+            end
+            
+            if exist('period','var') == 0
+                period = new_period;
                 nextPauseTime = period;
+            else
+                if ~isequal(period,new_period)
+                    nextPauseTime = period;
+                end
             end
+            
+            startTime = java.lang.System.currentTimeMillis;
         end
-        
-        startTime = java.lang.System.currentTimeMillis;
     end
     if (strcmp(mode,'file') && java.lang.System.currentTimeMillis - startTime > 60000)
         file = 'configuration_SDA.xml';
@@ -180,45 +145,59 @@ while 1
     nextPauseTime = nextPauseTime - pauseTime;
     pause(pauseTime/1000)
     
-    value = -1;
     tic;
-    switch lower(type{index})
-        case 'estimationci'
-            value = estimation(targetResources{index},targetMetric{index},'ci',parameters{index},myRetriever, mode);
-        case 'estimationfcfs'
-            value = estimation(targetResources{index},targetMetric{index},'fcfs',parameters{index},myRetriever, mode);
-        case 'estimationubo'
-            value = estimation(targetResources{index},targetMetric{index},'ubo',parameters{index},myRetriever, mode);
-        case 'estimationubr'
-            value = estimation(targetResources{index},targetMetric{index},'ubr',parameters{index},myRetriever, mode);
-        case 'haproxyci'
-            [value,count] = haproxyCI(targetResources(index,:),targetMetric{index},parameters{index},myRetriever, mode, dcAgent, returnedMetric{index}, new_period(index),fileID,count);
-        case 'haproxyubr'
-            value = haproxyUBR(targetResources(index,:),targetMetric{index},parameters{index},myRetriever, mode);
-            %         case 'ForecastingML'
-            %             value = forecastingML(targetResources{index},targetMetric{index},parameters{index},myRetriever);
-            %         case 'Correlation'
-            %             value = correlation(targetResources{index},targetMetric{index},parameters{index},myRetriever);
-        case 'forecastingtimeseriesar'
-            value = forecastingTimeseries(targetResources(index,:),returnedMetric{index},targetMetric{index},'AR',parameters{index},myRetriever, mode, dcAgent);
-        case 'forecastingtimeseriesarima'
-            value = forecastingTimeseries(targetResources(index,:),returnedMetric{index},targetMetric{index},'ARIMA',parameters{index},myRetriever, mode, dcAgent);
-        case 'forecastingtimeseriesarma'
-            value = forecastingTimeseries(targetResources(index,:),returnedMetric{index},targetMetric{index},'ARMA',parameters{index},myRetriever, mode, dcAgent);
+    
+    targetResources = myRetriever.getMetricMap.get(targetMetric{index})
+    
+    if ~isempty(targetResources)
+        
+        for i = 1:targetResources.size
+            targetResource = targetResources.get(i-1);
+            value = -1;
+            type{index}
+            switch lower(type{index})
+                case 'estimationci'
+                    value = estimation(targetResource,targetMetric{index},'ci',parameters{index},myRetriever, mode);
+                case 'estimationfcfs'
+                    value = estimation(targetResource,targetMetric{index},'fcfs',parameters{index},myRetriever, mode);
+                case 'estimationubo'
+                    value = estimation(targetResource,targetMetric{index},'ubo',parameters{index},myRetriever, mode);
+                case 'estimationubr'
+                    value = estimation(targetResource,targetMetric{index},'ubr',parameters{index},myRetriever, mode);
+                case 'haproxyci'
+                    [value,count] = haproxyCI(targetResource,targetMetric{index},parameters{index},myRetriever, mode, dcAgent, returnedMetric{index}, new_period(index),fileID,count);
+                case 'haproxyubr'
+                    value = haproxyUBR(targetResource,targetMetric{index},parameters{index},myRetriever, mode);
+                    %         case 'ForecastingML'
+                    %             value = forecastingML(targetResources,targetMetric{index},parameters{index},myRetriever);
+                    %         case 'Correlation'
+                    %             value = correlation(targetResources,targetMetric{index},parameters{index},myRetriever);
+                case 'forecastingtimeseriesar'
+                    value = forecastingTimeseries(targetResource,targetMetric{index},'AR',parameters{index},myRetriever, mode);
+                case 'forecastingtimeseriesarima'
+                    value = forecastingTimeseries(targetResource,targetMetric{index},'ARIMA',parameters{index},myRetriever, mode);
+                case 'forecastingtimeseriesarma'
+                    value = forecastingTimeseries(targetResource,targetMetric{index},'ARMA',parameters{index},myRetriever, mode);
+            end
+            
+            if value + 1 < 0.00001
+            else
+                try
+                    value
+                    
+                    dcAgent.send(dc.createResource(targetResource),returnedMetric{index},num2str(value));
+                catch exception
+                       exception.message
+                       for k=1:length(exception.stack)
+                           exception.stack(k);
+                       end
+                end
+            end
+        end
+    else
+        disp(strcat('No resource found for metric: ',targetMetric{index}));
     end
     
-    if value + 1 < 0.00001
-    else
-        try
-            value
-            dcAgent.sendSyncMonitoringDatum(num2str(value),returnedMetric{index},targetResources{index});
-        catch exception
-            %    exception.message
-            %    for k=1:length(exception.stack)
-            %        exception.stack(k);
-            %    end
-        end
-    end
     nextPauseTime = nextPauseTime - toc*1000;
     for i = 1:length(nextPauseTime)
         if nextPauseTime(i) < 0

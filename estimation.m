@@ -62,7 +62,7 @@ end
 rawData = data_format;
 rawData{3, category_index} = [];
 
-if strcmp(mode,'kb')
+if strcmp(mode,'tower4clouds')
     if ~isempty(parameters.get('window'))
         window = str2double(parameters.get('window'));
     end

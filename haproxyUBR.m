@@ -1,13 +1,13 @@
 function demand = haproxyUBR( targetResources,targetMetric,parameters, obj, mode )
 
-N_haproxy = size(targetResources,2)
+N_haproxy = 1;
 
 for i = 1:N_haproxy
-    temp_str{1,i} = obj.obtainData(targetResources{1,i},targetMetric);
+    temp_str{1,i} = obj.obtainData(targetResources,targetMetric);
     
     if isempty(temp_str{1,i})
         demand = -1;
-        disp(strcat('No data received from target resources: ',targetResources{1,i}))
+        disp(strcat('No data received from target resources: ',targetResources))
         return;
     end
 end
@@ -21,7 +21,7 @@ import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.Collections;
 
-if strcmp(mode,'kb')
+if strcmp(mode,'tower4clouds')
     if ~isempty(parameters.get('window'))
         window = str2double(parameters.get('window'));
     end
