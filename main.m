@@ -150,50 +150,34 @@ while 1
     targetResources = myRetriever.getMetricMap.get(targetMetric{index})
     
     if ~isempty(targetResources)
-        
-        for i = 1:targetResources.size
-            targetResource = targetResources.get(i-1);
-            value = -1;
-            type{index}
-            switch lower(type{index})
-                case 'estimationci'
-                    value = estimation(targetResource,targetMetric{index},'ci',parameters{index},myRetriever, mode);
-                case 'estimationfcfs'
-                    value = estimation(targetResource,targetMetric{index},'fcfs',parameters{index},myRetriever, mode);
-                case 'estimationubo'
-                    value = estimation(targetResource,targetMetric{index},'ubo',parameters{index},myRetriever, mode);
-                case 'estimationubr'
-                    value = estimation(targetResource,targetMetric{index},'ubr',parameters{index},myRetriever, mode);
-                case 'haproxyci'
-                    [value,count] = haproxyCI(targetResource,targetMetric{index},parameters{index},myRetriever, mode, dcAgent, returnedMetric{index}, new_period(index),fileID,count);
-                case 'haproxyubr'
-                    value = haproxyUBR(targetResource,targetMetric{index},parameters{index},myRetriever, mode);
-                    %         case 'ForecastingML'
-                    %             value = forecastingML(targetResources,targetMetric{index},parameters{index},myRetriever);
-                    %         case 'Correlation'
-                    %             value = correlation(targetResources,targetMetric{index},parameters{index},myRetriever);
-                case 'forecastingtimeseriesar'
-                    value = forecastingTimeseries(targetResource,targetMetric{index},'AR',parameters{index},myRetriever, mode);
-                case 'forecastingtimeseriesarima'
-                    value = forecastingTimeseries(targetResource,targetMetric{index},'ARIMA',parameters{index},myRetriever, mode);
-                case 'forecastingtimeseriesarma'
-                    value = forecastingTimeseries(targetResource,targetMetric{index},'ARMA',parameters{index},myRetriever, mode);
-            end
-            
-            if value + 1 < 0.00001
-            else
-                try
-                    value
-                    
-                    dcAgent.send(dc.createResource(targetResource),returnedMetric{index},num2str(value));
-                catch exception
-                       exception.message
-                       for k=1:length(exception.stack)
-                           exception.stack(k);
-                       end
-                end
-            end
+               
+        value = -1;
+        type{index}
+        switch lower(type{index})
+            case 'estimationci'
+                value = estimation_mic(targetResources,returnedMetric{index},targetMetric{index},'ci',parameters{index},myRetriever, mode, dc);
+            case 'estimationfcfs'
+                value = estimation_mic(targetResources,returnedMetric{index},targetMetric{index},'fcfs',parameters{index},myRetriever, mode, dc);
+            case 'estimationubo'
+                value = estimation_mic(targetResources,returnedMetric{index},targetMetric{index},'ubo',parameters{index},myRetriever, mode, dc);
+            case 'estimationubr'
+                value = estimation_mic(targetResources,returnedMetric{index},targetMetric{index},'ubr',parameters{index},myRetriever, mode, dc);
+            case 'haproxyci'
+                [value,count] = haproxyCI(targetResource,targetMetric{index},parameters{index},myRetriever, mode, dcAgent, returnedMetric{index}, new_period(index),fileID,count);
+            case 'haproxyubr'
+                value = haproxyUBR(targetResources,targetMetric{index},parameters{index},myRetriever, mode);
+                %         case 'ForecastingML'
+                %             value = forecastingML(targetResources,targetMetric{index},parameters{index},myRetriever);
+                %         case 'Correlation'
+                %             value = correlation(targetResources,targetMetric{index},parameters{index},myRetriever);
+            case 'forecastingtimeseriesar'
+                value = forecastingTimeseries(targetResources,returnedMetric{index},targetMetric{index},'AR',parameters{index},myRetriever, mode, dc);
+            case 'forecastingtimeseriesarima'
+                value = forecastingTimeseries(targetResources,returnedMetric{index},targetMetric{index},'ARIMA',parameters{index},myRetriever, mode, dc);
+            case 'forecastingtimeseriesarma'
+                value = forecastingTimeseries(targetResources,returnedMetric{index},targetMetric{index},'ARMA',parameters{index},myRetriever, mode, dc);
         end
+        
     else
         disp(strcat('No resource found for metric: ',targetMetric{index}));
     end

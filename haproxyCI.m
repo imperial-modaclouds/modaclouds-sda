@@ -1,15 +1,16 @@
 function [demand,count_file] = haproxyCI( targetResources,targetMetric,parameters, obj, mode, dcAgent, returnedMetric, period, fileID, count_file )
 
 tic
-N_haproxy = 1;
+
+N_haproxy = targetResources.size;
 
 flag = 0;
 for i = 1:N_haproxy
-    temp_str{1,i} = obj.obtainData(targetResources,targetMetric);
+    temp_str{1,i} = obj.obtainData(targetResources.get(i-1),targetMetric);
     
     if isempty(temp_str{1,i})
         demand = -1;
-        disp(strcat('No data received from target resources: ',targetResources))
+        disp(strcat('No data received from target resources: ',targetResources.get(i-1)))
         return
     else
         flag = 1;
@@ -175,7 +176,7 @@ for k = 1:N_haproxy
                 sessionsList{1,frontendID} = ArrayList;
                 sessionsListInd{1,frontendID} = ArrayList;
             end
-            frontendResourceMap.put(frontend,targetResources);
+            frontendResourceMap.put(frontend,targetResource);
             frontendID = frontendList.indexOf(frontend) + 1;
             thinkTimes{1,frontendID} = zeros(1,2);
             if isempty(sessionIDList{1,frontendID})

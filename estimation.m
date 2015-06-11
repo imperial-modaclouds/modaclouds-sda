@@ -1,4 +1,4 @@
-function demand = estimation( targetResources,targetMetric,method,parameters, obj, mode )
+function demand = estimation( targetResources,returnedMetric,targetMetric,method,parameters, obj, mode )
 
 data_format = [];
 category_index = 1;
@@ -19,25 +19,27 @@ for j = 0:values.size-1
     str = values.get(j);
     str = java.lang.String(str);
     split_str = str.split(',');
-    dateFormat = java.text.SimpleDateFormat('yyyyMMddHHmmssSSS');
+    %     dateFormat = java.text.SimpleDateFormat('yyyyMMddHHmmssSSS');
+    %
+    %     date_str = '';
+    %
+    %     for k = 1:7
+    %         date_str = strcat(date_str,char(split_str(k)));
+    %     end
+    %
+    %     try
+    %         date = dateFormat.parse(date_str);
+    %     catch e
+    %         e.printStackTrace();
+    %     end
+    %
+    %     date_milli = date.getTime();
+    %
+    %     jobID = char(split_str(8));
+    %
+    %     category_str = char(split_str(9));
     
-    date_str = '';
-    
-    for k = 1:7
-        date_str = strcat(date_str,char(split_str(k)));
-    end
-    
-    try
-        date = dateFormat.parse(date_str);
-    catch e
-        e.printStackTrace();
-    end
-    
-    date_milli = date.getTime();
-    
-    jobID = char(split_str(8));
-    
-    category_str = char(split_str(9));
+    category_str = char(split_str(1));
     
     if isKey(mapObj, category_str) == 0
         mapObj(category_str) = category_index;
@@ -51,9 +53,9 @@ for j = 0:values.size-1
         category = mapObj(category_str);
     end
     
-    if strcmp(split_str(10),'Request Begun')
-        continue;
-    end
+    %     if strcmp(split_str(10),'Request Begun')
+    %         continue;
+    %     end
     response_time = str2double(char(split_str(11)));
     data_format{3,category} = [data_format{3,category};date_milli-response_time*1000];
     data_format{4,category} = [data_format{4,category};response_time];
@@ -125,3 +127,18 @@ switch method
         warning('Unexpected method. No demand generated.');
 end
 
+for i = 1:length(demand)
+    if isnan(demand(i))
+        continue
+    end
+    try
+        dcAgent.send(dc.createResource(targetResources),returnedMetric,strcat(category_list{1,i},': ',num2str(demand(i))));
+    catch exception
+        exception.message
+        for k=1:length(exception.stack)
+            exception.stack(k);
+        end
+    end
+end
+
+demand = -1;
