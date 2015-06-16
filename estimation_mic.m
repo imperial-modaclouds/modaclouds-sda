@@ -61,9 +61,9 @@ while (it.hasNext)
     rawData{3, category_index} = [];
     warmUp = 0;
     
-    if strcmp(mode,'kb')
+    if strcmp(mode,'tower4clouds')
         if ~isempty(parameters.get('window'))
-            window = str2double(parameters.get('window'));
+            window = str2double(parameters.get('window'))*1000;
         end
         if ~isempty(parameters.get('warmUp'))
             warmUp = str2double(parameters.get('warmUp'));
@@ -105,34 +105,36 @@ while (it.hasNext)
     end
     
     %FIX: obtain cpu value
-    cpu = obj.obtainData(cpuUtilTarget,cpuUtilMetric);
-    if isempty(cpu)
-        demand = -1;
-        disp('No CPU data received')
-        return;
-    end
-    cpu_value = convertArrayList(cpu.getValues);
-    cpu_timestamps = convertArrayList(cpu.getTimestamps);
-    
-    length_cpu_value = length(cpu_value);
-    length_cpu_timestamps = length(cpu_timestamps);
-    
-    if length_cpu_value > length_cpu_timestamps
-        cpu_value(length_cpu_timestamps+1:length_cpu_value)=[];
-    end
-    
-    if length_cpu_value < length_cpu_timestamps
-        cpu_timestamps(length_cpu_value+1:length_cpu_timestamps)=[];
-    end
+%     cpu = obj.obtainData(cpuUtilTarget,cpuUtilMetric);
+%     if isempty(cpu)
+%         demand = -1;
+%         disp('No CPU data received')
+%         return;
+%     end
+%     cpu_value = convertArrayList(cpu.getValues);
+%     cpu_timestamps = convertArrayList(cpu.getTimestamps);
+%     
+%     length_cpu_value = length(cpu_value);
+%     length_cpu_timestamps = length(cpu_timestamps);
+%     
+%     if length_cpu_value > length_cpu_timestamps
+%         cpu_value(length_cpu_timestamps+1:length_cpu_value)=[];
+%     end
+%     
+%     if length_cpu_value < length_cpu_timestamps
+%         cpu_timestamps(length_cpu_value+1:length_cpu_timestamps)=[];
+%     end
     
     rawData
-    [data,category_list] = dataFormat(rawData,window,category_list,cpu_value,cpu_timestamps);
+    %[data,category_list] = dataFormat(rawData,window,category_list,cpu_value,cpu_timestamps);
+    [data,category_list] = dataFormat(rawData,window,category_list);
+    
     data
     for i = 1:size(data,2)-1
         mean(data{6,i})
     end
     data{2,end}
-    save('SDAData.mat','data','rawData','window','cpu_value','cpu_timestamps','category_list');
+    save('SDAData.mat','data','rawData','window','category_list');
     
     switch method
         case 'ci'
@@ -153,7 +155,7 @@ while (it.hasNext)
             strcat(targetResources.get(i-1),': ',num2str(demand(i)))
             %dcAgent.sendSyncMonitoringDatum(num2str(demand(i)),returnedMetric,targetResources{1,i});
             dcAgent = dc.dcAgent();
-            dcAgent.send(dc.createResource(targetResources.get(i-1)),returnedMetric,num2str(demand(i)));
+            dcAgent.send(dc.createResource(targetResources.get(i-1)),returnedMetric,demand(i));
         catch err
             disp(getReport(err,'extended'));
             disp('could not send data to dda')

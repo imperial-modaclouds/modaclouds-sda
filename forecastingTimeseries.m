@@ -168,15 +168,15 @@ if ~isempty(targetResources)
         
         disp(strcat(returnedMetric,' ',targetResource,' ',num2str(values)))
         
-        try
+        %try
             dcAgent = dc.dcAgent();
-            dcAgent.send(dc.createResource(targetResource),returnedMetric,num2str(values));
-        catch exception
-            exception.message
-            for k=1:length(exception.stack)
-                exception.stack(k);
-            end
-        end
+            dcAgent.send(dc.createResource(targetResource),returnedMetric,values);
+        %catch exception
+        %    exception.message
+        %    for k=1:length(exception.stack)
+        %        exception.stack(k);
+        %    end
+        %end
         
     end
 end
