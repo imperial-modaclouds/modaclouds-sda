@@ -54,7 +54,7 @@ while (it.hasNext)
             %         end
             response_time = value;
             data_format{3,category} = [data_format{3,category};ts];
-            data_format{4,category} = [data_format{4,category};response_time];
+            data_format{4,category} = [data_format{4,category};response_time/1000];
         end
     end
     rawData = data_format;
@@ -104,30 +104,28 @@ while (it.hasNext)
         end
     end
     
-    %FIX: obtain cpu value
-%     cpu = obj.obtainData(cpuUtilTarget,cpuUtilMetric);
-%     if isempty(cpu)
-%         demand = -1;
-%         disp('No CPU data received')
-%         return;
-%     end
-%     cpu_value = convertArrayList(cpu.getValues);
-%     cpu_timestamps = convertArrayList(cpu.getTimestamps);
-%     
-%     length_cpu_value = length(cpu_value);
-%     length_cpu_timestamps = length(cpu_timestamps);
-%     
-%     if length_cpu_value > length_cpu_timestamps
-%         cpu_value(length_cpu_timestamps+1:length_cpu_value)=[];
-%     end
-%     
-%     if length_cpu_value < length_cpu_timestamps
-%         cpu_timestamps(length_cpu_value+1:length_cpu_timestamps)=[];
-%     end
-    
     rawData
-    %[data,category_list] = dataFormat(rawData,window,category_list,cpu_value,cpu_timestamps);
-    [data,category_list] = dataFormat(rawData,window,category_list);
+    cpu = obj.obtainData(cpuUtilTarget,cpuUtilMetric);
+    if isempty(cpu)
+        demand = -1;
+        disp('No CPU data received')
+        [data,category_list] = dataFormat(rawData,window,category_list);
+    else
+        cpu_value = convertArrayList(cpu.getValues);
+        cpu_timestamps = convertArrayList(cpu.getTimestamps);
+
+        length_cpu_value = length(cpu_value);
+        length_cpu_timestamps = length(cpu_timestamps);
+
+        if length_cpu_value > length_cpu_timestamps
+            cpu_value(length_cpu_timestamps+1:length_cpu_value)=[];
+        end
+
+        if length_cpu_value < length_cpu_timestamps
+            cpu_timestamps(length_cpu_value+1:length_cpu_timestamps)=[];
+        end
+        [data,category_list] = dataFormat(rawData,window,category_list,cpu_value,cpu_timestamps);
+    end
     
     data
     for i = 1:size(data,2)-1
@@ -138,7 +136,7 @@ while (it.hasNext)
     
     switch method
         case 'ci'
-            demand = ci(data,nCPU,warmUp);
+            demand = ci(data,warmUp,0,nCPU);
         case 'fcfs'
             demand = fcfs(data,nCPU,avgWin);
         case 'ubo'

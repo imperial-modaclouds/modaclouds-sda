@@ -95,7 +95,7 @@ function [data,category_list] = dataFormat(data, period, category_list, cpu, cpu
 
         [cpu_time, index] = sort(cpu_time);
         cpu  = cpu(index);
-        cpu_time = cpu_time - 60*60*1000;
+        %cpu_time = cpu_time - 60*60*1000;
 
         for i = 1:size(data{1,1},1)
             index_find = cpu_time >= data{1,1}(i,1) & cpu_time <= data{1,1}(i,1)+period;
