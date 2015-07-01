@@ -105,10 +105,6 @@ while (it.hasNext)
     end
     
     rawData
-    flag = dc.registerMetric(cpuUtilMetric);
-    if flag == -1
-        disp('Error registering CPU Utilization metric');
-    end
     
     cpu = obj.obtainData(cpuUtilTarget,cpuUtilMetric);
     if isempty(cpu)
@@ -148,6 +144,8 @@ while (it.hasNext)
             demand = ubo(data,maxTime);
         case 'ubr'
             demand = ubr(data,nCPU);
+        case 'erps'
+            demand = main_ERPS(data, warmUp+1, 0, nCPU);
         case 'otherwise'
             warning('Unexpected method. No demand generated.');
     end

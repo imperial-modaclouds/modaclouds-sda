@@ -68,6 +68,16 @@ while 1
                 if ~isempty(parameters{i+1}.get('samplingTime'))
                     new_period(i+1) = str2double(parameters{i+1}.get('samplingTime'))*1000;
                 end
+                
+                if ~isempty(parameters{i+1}.get('CPUUtilMetric'))
+                    flag = dc.registerMetric(parameters{i+1}.get('CPUUtilMetric'));
+                    if flag == -1
+                        disp('Error registering CPU Utilization metric');
+                    else
+                        disp('Registering CPU Utilization metric succsssful');
+                    end
+                end
+                
                 %                 if ~isempty(parameters{i+1}.get('targetMetric'))
                 %                     targetMetric{i+1} = char(parameters{i+1}.get('targetMetric'));
                 %                 end
@@ -150,7 +160,7 @@ while 1
     targetResources = myRetriever.getMetricMap.get(targetMetric{index})
     
     if ~isempty(targetResources)
-               
+        
         value = -1;
         type{index}
         switch lower(type{index})
