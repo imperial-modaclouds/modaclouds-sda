@@ -105,6 +105,11 @@ while (it.hasNext)
     end
     
     rawData
+    flag = dc.registerMetric(cpuUtilMetric);
+    if flag == -1
+        disp('Error registering CPU Utilization metric');
+    end
+    
     cpu = obj.obtainData(cpuUtilTarget,cpuUtilMetric);
     if isempty(cpu)
         demand = -1;
