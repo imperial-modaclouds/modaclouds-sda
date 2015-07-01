@@ -57,132 +57,125 @@ if ~isempty(targetResources)
             end
         end
         
-        try
-            switch(method)
-                case 'AR'
-                    %% Forecast linear system response into future
-                    data_id = iddata(data',[]);
-                    try
-                        sys = ar(data_id,m);
-                        p = forecast(sys,data_id,K);
-                        values = p.y;
-                        values = values(K);
-                    catch exception
-                        values = -1;
-                        exception.message
-                        for k=1:length(exception.stack)
-                            exception.stack(k);
+        switch(method)
+            case 'AR'
+                %% Forecast linear system response into future
+                data_id = iddata(data',[]);
+                try
+                    sys = ar(data_id,m);
+                    p = forecast(sys,data_id,K);
+                    values = p.y;
+                    values = values(K);
+                catch exception
+                    values = -1;
+                    exception.message
+                    for k=1:length(exception.stack)
+                        exception.stack(k);
+                    end
+                    return;
+                end
+                
+            case 'ARMA'
+                if p == -1 || q == -1
+                    LOGL = zeros(4,4); %Initialize
+                    PQ = zeros(4,4);
+                    for p = 1:4
+                        for q = 1:4
+                            mod = arima(p,0,q);
+                            [fit,~,logL] = estimate(mod,data','print',false);
+                            LOGL(p,q) = logL;
+                            PQ(p,q) = p+q;
                         end
-                        return;
                     end
                     
-                case 'ARMA'
-                    if p == -1 || q == -1
-                        LOGL = zeros(4,4); %Initialize
-                        PQ = zeros(4,4);
+                    LOGL = reshape(LOGL,16,1);
+                    PQ = reshape(PQ,16,1);
+                    [~,bic] = aicbic(LOGL,PQ+1,100);
+                    bic = reshape(bic,4,4);
+                    
+                    [p,q] = find(bic==min(min(bic)));
+                end
+                
+                Mdl = arima(p,0,q);
+                
+                try
+                    if iscolumn(data)
+                        EstMdl = estimate(Mdl,data);
+                        [YF YMSE] = forecast(EstMdl,K,'Y0',data);
+                    else
+                        EstMdl = estimate(Mdl,data');
+                        [YF YMSE] = forecast(EstMdl,K,'Y0',data');
+                    end
+                catch exception
+                    values = -1;
+                    exception.message
+                    for k=1:length(exception.stack)
+                        exception.stack(k);
+                    end
+                    return;
+                end
+                
+                values = YF(K);
+                
+            case 'ARIMA'
+                %% Forecast ARIMA or ARIMAX process
+                try
+                    if p == -1 || q == -1 || d == -1
+                        LOGL = zeros(4,2,4); %Initialize
+                        PQ = zeros(4,2,4);
                         for p = 1:4
                             for q = 1:4
-                                mod = arima(p,0,q);
-                                [fit,~,logL] = estimate(mod,data','print',false);
-                                LOGL(p,q) = logL;
-                                PQ(p,q) = p+q;
-                            end
-                        end
-                        
-                        LOGL = reshape(LOGL,16,1);
-                        PQ = reshape(PQ,16,1);
-                        [~,bic] = aicbic(LOGL,PQ+1,100);
-                        bic = reshape(bic,4,4);
-                        
-                        [p,q] = find(bic==min(min(bic)));
-                    end
-                    
-                    Mdl = arima(p,0,q);
-                    
-                    try
-                        if iscolumn(data)
-                            EstMdl = estimate(Mdl,data);
-                            [YF YMSE] = forecast(EstMdl,K,'Y0',data);
-                        else
-                            EstMdl = estimate(Mdl,data');
-                            [YF YMSE] = forecast(EstMdl,K,'Y0',data');
-                        end
-                    catch exception
-                        values = -1;
-                        exception.message
-                        for k=1:length(exception.stack)
-                            exception.stack(k);
-                        end
-                        return;
-                    end
-                    
-                    values = YF(K);
-                    
-                case 'ARIMA'
-                    %% Forecast ARIMA or ARIMAX process
-                    try
-                        if p == -1 || q == -1 || d == -1
-                            LOGL = zeros(4,2,4); %Initialize
-                            PQ = zeros(4,2,4);
-                            for p = 1:4
-                                for q = 1:4
-                                    for d = 0:1
-                                        mod = arima(p,d,q);
-                                        [fit,~,logL] = estimate(mod,data','print',false);
-                                        LOGL(p,d+1,q) = logL;
-                                        PQ(p,d+1,q) = p+q;
-                                    end
+                                for d = 0:1
+                                    mod = arima(p,d,q);
+                                    [fit,~,logL] = estimate(mod,data','print',false);
+                                    LOGL(p,d+1,q) = logL;
+                                    PQ(p,d+1,q) = p+q;
                                 end
                             end
-
-                            LOGL = reshape(LOGL,32,1);
-                            PQ = reshape(PQ,32,1);
-                            [~,bic] = aicbic(LOGL,PQ+1,100);
-                            bic = reshape(bic,4,2,4);
-
-                            [temp I] = min(bic,[],3);
-                            [p,d] = find(temp==min(min(temp)));
-                            q = I(p,d);
-                            d = d-1;
                         end
-                    catch
-                        disp('Error estimating the parameters, use default values')
-                        p = 1;
-                        q = 1;
-                        d = 1;
+                        
+                        LOGL = reshape(LOGL,32,1);
+                        PQ = reshape(PQ,32,1);
+                        [~,bic] = aicbic(LOGL,PQ+1,100);
+                        bic = reshape(bic,4,2,4);
+                        
+                        [temp I] = min(bic,[],3);
+                        [p,d] = find(temp==min(min(temp)));
+                        q = I(p,d);
+                        d = d-1;
                     end
-                    p
-                    d
-                    q
-                    Mdl = arima(p,d,q);
-                    
-                    try
-                        if iscolumn(data)
-                            EstMdl = estimate(Mdl,data);
-                            [YF YMSE] = forecast(EstMdl,K,'Y0',data);
-                        else
-                            EstMdl = estimate(Mdl,data');
-                            [YF YMSE] = forecast(EstMdl,K,'Y0',data');
-                        end
-                    catch exception
-                        values = -1;
-                        exception.message
-                        for k=1:length(exception.stack)
-                            exception.stack(k);
-                        end
-                        return;
+                catch
+                    disp('Error estimating the parameters, use default values')
+                    p = 1;
+                    q = 1;
+                    d = 1;
+                end
+                p
+                d
+                q
+                Mdl = arima(p,d,q);
+                
+                try
+                    if iscolumn(data)
+                        EstMdl = estimate(Mdl,data);
+                        [YF YMSE] = forecast(EstMdl,K,'Y0',data);
+                    else
+                        EstMdl = estimate(Mdl,data');
+                        [YF YMSE] = forecast(EstMdl,K,'Y0',data');
                     end
-                    
-                    values = YF(K);
-                    
-                    %send back the data
-            end
-        catch err
-            disp(getReport(err,'extended'));
-            values = -1;
-            return
+                catch exception
+                    values = -1;
+                    exception.message
+                    for k=1:length(exception.stack)
+                        exception.stack(k);
+                    end
+                    return;
+                end
+                
+                values = YF(K);
+                
+                %send back the data
         end
-        
         disp(strcat(returnedMetric,' ',targetResource,' ',num2str(values)))
         
         %try
