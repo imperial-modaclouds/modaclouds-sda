@@ -172,6 +172,8 @@ while 1
                 value = estimation_mic(targetResources,returnedMetric{index},targetMetric{index},'ubo',parameters{index},myRetriever, mode, dc);
             case 'estimationubr'
                 value = estimation_mic(targetResources,returnedMetric{index},targetMetric{index},'ubr',parameters{index},myRetriever, mode, dc);
+            case 'estimationerps'
+                value = estimation_mic(targetResources,returnedMetric{index},targetMetric{index},'erps',parameters{index},myRetriever, mode, dc);
             case 'haproxyci'
                 [value,count] = haproxyCI(targetResource,targetMetric{index},parameters{index},myRetriever, mode, dcAgent, returnedMetric{index}, new_period(index),fileID,count);
             case 'haproxyubr'
