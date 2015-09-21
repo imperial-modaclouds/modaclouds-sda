@@ -9,3 +9,9 @@ where mode is either "kb" or "file" and port is the listerning port to receive d
 
 ## Wiki
 For the installation and the details of the Modaclouds-SDA, please refer to the wiki: https://github.com/imperial-modaclouds/Modaclouds-SDA/wiki
+
+##License##
+
+Licensed under the [BSD 3-clause][1]
+
+[1]: http://opensource.org/licenses/BSD-3-Clause
